@@ -16,9 +16,11 @@ export default function Header({ user }: Props) {
 
   return (
     <header className="w-full border-b bg-white px-6 py-4 shadow-sm flex justify-between items-center">
-      <Link to="/" className="text-xl font-bold text-blue-600">
-        Schulbox
-      </Link>
+<Link to="/" className="flex items-center gap-2">
+  <img src="/logo.png" alt="Schulbox Logo" className="h-10" />
+  <span className="text-xl font-bold text-gray-800 dark:text-white">Schulbox</span>
+</Link>
+
 
       <nav className="flex items-center gap-6 relative">
         {user?.role === "lehrkraft" && (
