@@ -4,8 +4,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { getSupabaseServerClient } from "~/lib/supabase.server";
+import Header from "~/components/Header";
 
 import "./tailwind.css";
 
@@ -22,17 +26,40 @@ export const links: LinksFunction = () => [
   },
 ];
 
+export async function loader(ctx: LoaderFunctionArgs) {
+  const supabase = getSupabaseServerClient(ctx);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let profile = null;
+
+  if (user) {
+    const { data } = await supabase
+      .from("users")
+      .select("vorname, nachname, role")
+      .eq("user_id", user.id)
+      .single();
+    profile = { email: user.email, ...data };
+  }
+
+  return json({ user: profile });
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
-    <html lang="en">
+    <html lang="de">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body>
-        {children}
+      <body className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+        <Header user={user} />
+        <main className="px-6 py-10">{children}</main>
         <ScrollRestoration />
         <Scripts />
       </body>
