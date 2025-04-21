@@ -10,7 +10,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Schulbox Logo" className="h-10" />
+          <img src="/logo.png" alt="Schulbox Logo" className="h-12" />
         </Link>
 
         {/* Navigation + Suche */}
