@@ -45,16 +45,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const { error: insertError } = await supabase.from("users").insert([
     {
-      user_id,
-      Vorname,
-      Nachname,
-      Straße,
-      Hausnummer,
-      Türnummer,
-      Stiege,
-      Postleitzahl,
-      Ort,
-      Telefonnummer,
+        email,
+        Vorname,
+        Nachname,
+        Straße,
+        Hausnummer,
+        Türnummer,
+        Stiege,
+        Postleitzahl,
+        Ort,
+        Telefonnummer
     },
   ]);
 
