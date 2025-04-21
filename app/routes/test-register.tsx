@@ -1,42 +1,46 @@
-// test-register.tsx
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function TestRegister() {
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
+  const [email, setEmail] = useState("kamal.a15190@gmail.com");
+  const [password, setPassword] = useState("12345678");
   const [message, setMessage] = useState("");
 
-  async function register() {
-    setMessage("Loading...");
-    const { error, data } = await supabase.auth.signUp({
+  const handleTestRegister = async () => {
+    setMessage("Wird verarbeitet...");
+
+    const { data, error } = await supabase.auth.signUp({
       email,
-      password: pw,
+      password,
     });
 
     if (error) {
-      setMessage("Fehler: " + error.message);
+      console.error("Fehler bei der Registrierung:", error.message);
+      setMessage("❌ Fehler: " + error.message);
     } else {
-      setMessage("Check your Mailbox! ✅");
+      console.log("Registrierung erfolgreich:", data);
+      setMessage("✅ Registrierung erfolgreich! Bitte E-Mail bestätigen.");
     }
-  }
+  };
 
   return (
-    <div style={{ padding: 32 }}>
+    <div style={{ padding: "2rem" }}>
       <h2>Testregistrierung</h2>
       <input
         type="email"
-        placeholder="E-Mail"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-      /><br />
+        placeholder="E-Mail"
+      />
+      <br />
       <input
         type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
         placeholder="Passwort"
-        value={pw}
-        onChange={(e) => setPw(e.target.value)}
-      /><br />
-      <button onClick={register}>Testregistrieren</button>
+      />
+      <br />
+      <button onClick={handleTestRegister}>Testregistrieren</button>
       <p>{message}</p>
     </div>
   );
