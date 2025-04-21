@@ -7,7 +7,9 @@ export default function TestRegister() {
   const [message, setMessage] = useState("");
 
   const handleTestRegister = async () => {
-    setMessage("Wird verarbeitet...");
+    console.log("✅ signup() wurde aufgerufen");
+
+    setMessage("⏳ Registrierung wird verarbeitet...");
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -15,33 +17,68 @@ export default function TestRegister() {
     });
 
     if (error) {
-      console.error("Fehler bei der Registrierung:", error.message);
+      console.error("❌ Fehler bei der Registrierung:", error.message);
       setMessage("❌ Fehler: " + error.message);
     } else {
-      console.log("Registrierung erfolgreich:", data);
+      console.log("✅ Registrierung erfolgreich:", data);
       setMessage("✅ Registrierung erfolgreich! Bitte E-Mail bestätigen.");
     }
   };
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Testregistrierung</h2>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="E-Mail"
-      />
-      <br />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Passwort"
-      />
-      <br />
-      <button onClick={handleTestRegister}>Testregistrieren</button>
-      <p>{message}</p>
+    <div style={{ display: "flex", justifyContent: "center", padding: "3rem" }}>
+      <div style={{ maxWidth: "400px", width: "100%", textAlign: "center" }}>
+        <h2>Testregistrierung</h2>
+
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-Mail"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            marginBottom: "1rem",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Passwort"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            marginBottom: "1.5rem",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <button
+          onClick={handleTestRegister}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            backgroundColor: "#2563eb",
+            color: "#fff",
+            fontWeight: "bold",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#1e40af")}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")}
+        >
+          Testregistrieren
+        </button>
+
+        <p style={{ marginTop: "1.5rem", color: "#333" }}>{message}</p>
+      </div>
     </div>
   );
 }
