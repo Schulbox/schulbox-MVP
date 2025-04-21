@@ -13,15 +13,15 @@ export async function action({ request }: { request: Request }) {
       password,
       options: {
         data: {
-          Vorname: formData.get("vorname"),
-          Nachname: formData.get("nachname"),
-          Straße: formData.get("straße"),
-          Hausnummer: formData.get("hausnummer"),
-          Türnummer: formData.get("türnummer"),
-          Stiege: formData.get("stiege"),
-          Postleitzahl: formData.get("postleitzahl"),
-          Ort: formData.get("ort"),
-          Telefonnummer: formData.get("telefonnummer"),
+          vorname: formData.get("vorname"),
+          nachname: formData.get("nachname"),
+          straße: formData.get("straße"),
+          hausnummer: formData.get("hausnummer"),
+          türnummer: formData.get("türnummer"),
+          stiege: formData.get("stiege"),
+          postleitzahl: formData.get("postleitzahl"),
+          ort: formData.get("ort"),
+          telefonnummer: formData.get("telefonnummer"),
           role: "lehrkraft",
         },
       },
@@ -29,6 +29,32 @@ export async function action({ request }: { request: Request }) {
 
     if (signUpError || !data.user) {
       return json({ error: translateError(signUpError?.message || "Unbekannter Fehler") });
+    }
+
+    const userId = data.user.id;
+
+    // Profildaten zur Sicherheit upserten (nach Trigger)
+    const insertData = {
+      user_id: userId,
+      vorname: formData.get("vorname"),
+      nachname: formData.get("nachname"),
+      straße: formData.get("straße"),
+      hausnummer: formData.get("hausnummer"),
+      türnummer: formData.get("türnummer"),
+      stiege: formData.get("stiege"),
+      postleitzahl: formData.get("postleitzahl"),
+      ort: formData.get("ort"),
+      telefonnummer: formData.get("telefonnummer"),
+      email,
+      role: "lehrkraft",
+    };
+
+    const { error: upsertError } = await supabase
+      .from("benutzer")
+      .upsert(insertData, { onConflict: "user_id" });
+
+    if (upsertError) {
+      return json({ error: translateError(upsertError.message) });
     }
 
     return redirect("/login");
