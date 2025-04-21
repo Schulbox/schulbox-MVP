@@ -1,9 +1,15 @@
-import { json } from "@remix-run/node";
+import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { supabase } from "~/lib/supabaseClient";
 
-export async function action({ request }: { request: Request }) {
+type ActionResponse = {
+  success?: boolean;
+  email?: string;
+  error?: string;
+};
+
+export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -14,18 +20,31 @@ export async function action({ request }: { request: Request }) {
       password,
       options: {
         data: {
+          vorname: formData.get("vorname"),
+          nachname: formData.get("nachname"),
+          straße: formData.get("straße"),
+          hausnummer: formData.get("hausnummer"),
+          türnummer: formData.get("türnummer"),
+          stiege: formData.get("stiege"),
+          postleitzahl: formData.get("postleitzahl"),
+          ort: formData.get("ort"),
+          telefonnummer: formData.get("telefonnummer"),
           role: "user",
         },
       },
     });
 
     if (signUpError || !data.user) {
-      return json({ error: translateError(signUpError?.message || "Unbekannter Fehler") });
+      return json<ActionResponse>({
+        error: translateError(signUpError?.message || "Unbekannter Fehler"),
+      });
     }
 
-    return json({ success: true, email });
-  } catch (err) {
-    return json({ error: "Ein unerwarteter Fehler ist aufgetreten." });
+    return json<ActionResponse>({ success: true, email });
+  } catch {
+    return json<ActionResponse>({
+      error: "Ein unerwarteter Fehler ist aufgetreten.",
+    });
   }
 }
 
@@ -41,7 +60,7 @@ function translateError(error: string): string {
 
 export default function Register() {
   const navigation = useNavigation();
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<ActionResponse>();
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -59,18 +78,20 @@ export default function Register() {
   }, [showSuccess]);
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12">
-      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">📝 Registrieren</h1>
+    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12 text-sm">
+      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">
+        📝 Registrieren
+      </h1>
 
       {showSuccess && actionData?.email && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full max-w-4xl text-sm">
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full max-w-4xl">
           Die Registrierung bei Schulbox war erfolgreich, um Ihre E-Mail verifizieren zu können,
           wurde soeben ein Bestätigungslink an <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
         </div>
       )}
 
       {!showSuccess && (
-        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl text-sm">
+        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
           <div className="flex flex-col">
             <label htmlFor="vorname">Vorname *</label>
             <input id="vorname" name="vorname" required className="input" />
@@ -81,7 +102,7 @@ export default function Register() {
             <input id="nachname" name="nachname" required className="input" />
           </div>
 
-          <div className="flex flex-col col-span-2">
+          <div className="flex flex-col md:col-span-2">
             <label htmlFor="straße">Straße *</label>
             <input id="straße" name="straße" required className="input" />
           </div>
@@ -124,7 +145,9 @@ export default function Register() {
           <div className="flex flex-col md:col-span-2">
             <label htmlFor="password">Passwort *</label>
             <input id="password" name="password" type="password" required minLength={6} className="input" />
-            <span className="text-gray-500 text-xs mt-1">Mindestens 6 Zeichen oder Zahlen erforderlich</span>
+            <span className="text-gray-500 text-xs mt-1">
+              Mindestens 6 Zeichen oder Zahlen erforderlich
+            </span>
           </div>
 
           <div className="md:col-span-2">
@@ -137,8 +160,8 @@ export default function Register() {
             </button>
           </div>
 
-          {actionData?.error && (
-            <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData.error}</p>
+          {"error" in (actionData ?? {}) && (
+            <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData?.error}</p>
           )}
         </Form>
       )}
