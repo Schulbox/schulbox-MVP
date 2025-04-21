@@ -8,40 +8,31 @@ export async function action({ request }: { request: Request }) {
   const password = formData.get("password") as string;
 
   try {
-    // 1. Benutzer registrieren
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          Vorname: formData.get("vorname"),
+          Nachname: formData.get("nachname"),
+          Straße: formData.get("straße"),
+          Hausnummer: formData.get("hausnummer"),
+          Türnummer: formData.get("türnummer"),
+          Stiege: formData.get("stiege"),
+          Postleitzahl: formData.get("postleitzahl"),
+          Ort: formData.get("ort"),
+          Telefonnummer: formData.get("telefonnummer"),
+          role: "lehrkraft",
+        },
+      },
     });
 
     if (signUpError || !data.user) {
       return json({ error: translateError(signUpError?.message || "Unbekannter Fehler") });
     }
 
-    const userId = data.user.id;
-
-    // 2. Profildaten in Tabelle "Benutzer" speichern
-    const insertData = {
-      user_id: userId,
-      Vorname: formData.get("vorname"),
-      Nachname: formData.get("nachname"),
-      Straße: formData.get("straße"),
-      Hausnummer: formData.get("hausnummer"),
-      Türnummer: formData.get("türnummer"),
-      Stiege: formData.get("stiege"),
-      Postleitzahl: formData.get("postleitzahl"),
-      Ort: formData.get("ort"),
-      Telefonnummer: formData.get("telefonnummer"),
-    };
-
-    const { error: insertError } = await supabase.from("benutzer").update(insertData).eq("user_id", userId);
-
-    if (insertError) {
-      return json({ error: translateError(insertError.message) });
-    }
-
     return redirect("/login");
-  } catch (err) {
+  } catch {
     return json({ error: "Ein unerwarteter Fehler ist aufgetreten." });
   }
 }
