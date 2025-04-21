@@ -86,13 +86,11 @@ export default function Register() {
   }, [showSuccess]);
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12 text-sm">
-      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">
-        📝 Registrieren
-      </h1>
+    <div className="flex flex-col items-center justify-start min-h-screen px-4 pt-12 text-sm max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-8 w-full">📝 Registrieren</h1>
 
       {showSuccess && actionData?.email && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full max-w-4xl">
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full">
           Die Registrierung bei Schulbox war erfolgreich, um Ihre E-Mail verifizieren zu können,
           wurde soeben ein Bestätigungslink an{" "}
           <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
@@ -104,81 +102,85 @@ export default function Register() {
       )}
 
       {!showSuccess && (
-        <Form method="post" className="w-full max-w-4xl space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label htmlFor="vorname">Vorname *</label>
-              <input id="vorname" name="vorname" required className="input" />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="nachname">Nachname *</label>
-              <input id="nachname" name="nachname" required className="input" />
-            </div>
-          </div>
+        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+  {/* Vorname + Nachname */}
+  <div className="flex flex-col">
+    <label htmlFor="vorname">Vorname *</label>
+    <input id="vorname" name="vorname" required className="border border-gray-300 p-2 rounded w-full" />
+  </div>
+  <div className="flex flex-col">
+    <label htmlFor="nachname">Nachname *</label>
+    <input id="nachname" name="nachname" required className="border border-gray-300 p-2 rounded w-full" />
+  </div>
 
-          <div className="flex flex-col">
-            <label htmlFor="straße">Straße *</label>
-            <input id="straße" name="straße" required className="input" />
-          </div>
+  {/* Straße (volle Breite) */}
+  <div className="flex flex-col md:col-span-2">
+    <label htmlFor="straße">Straße *</label>
+    <input id="straße" name="straße" required className="border border-gray-300 p-2 rounded w-full" />
+  </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label htmlFor="hausnummer">Nr. *</label>
-              <input id="hausnummer" name="hausnummer" required className="input" />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="türnummer">TürNr.</label>
-              <input id="türnummer" name="türnummer" className="input" />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="stiege">Stiege</label>
-              <input id="stiege" name="stiege" className="input" />
-            </div>
-          </div>
+  {/* Hausnummer + Türnummer + Stiege */}
+  <div className="grid grid-cols-3 gap-2 md:col-span-2">
+    <div className="flex flex-col">
+      <label htmlFor="hausnummer">Nr. *</label>
+      <input id="hausnummer" name="hausnummer" required className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+    <div className="flex flex-col">
+      <label htmlFor="türnummer">TürNr.</label>
+      <input id="türnummer" name="türnummer" className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+    <div className="flex flex-col">
+      <label htmlFor="stiege">Stiege</label>
+      <input id="stiege" name="stiege" className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+  </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label htmlFor="postleitzahl">Postleitzahl *</label>
-              <input id="postleitzahl" name="postleitzahl" required className="input" />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="ort">Ort *</label>
-              <input id="ort" name="ort" required className="input" />
-            </div>
-          </div>
+  {/* Postleitzahl + Ort + Telefonnummer */}
+  <div className="grid grid-cols-3 gap-2 md:col-span-2">
+    <div className="flex flex-col">
+      <label htmlFor="postleitzahl">Postleitzahl *</label>
+      <input id="postleitzahl" name="postleitzahl" required className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+    <div className="flex flex-col">
+      <label htmlFor="ort">Ort *</label>
+      <input id="ort" name="ort" required className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+    <div className="flex flex-col">
+      <label htmlFor="telefonnummer">Telefonnummer</label>
+      <input id="telefonnummer" name="telefonnummer" className="border border-gray-300 p-2 rounded w-full" />
+    </div>
+  </div>
 
-          <div className="flex flex-col">
-            <label htmlFor="telefonnummer">Telefonnummer</label>
-            <input id="telefonnummer" name="telefonnummer" className="input" />
-          </div>
+  {/* E-Mail */}
+  <div className="flex flex-col md:col-span-2">
+    <label htmlFor="email">E-Mail *</label>
+    <input id="email" name="email" type="email" required className="border border-gray-300 p-2 rounded w-full" />
+  </div>
 
-          <div className="flex flex-col">
-            <label htmlFor="email">E-Mail *</label>
-            <input id="email" name="email" type="email" required className="input" />
-          </div>
+  {/* Passwort */}
+  <div className="flex flex-col md:col-span-2">
+    <label htmlFor="password">Passwort *</label>
+    <input id="password" name="password" type="password" required minLength={6} className="border border-gray-300 p-2 rounded w-full" />
+    <span className="text-gray-500 text-xs mt-1">Mindestens 6 Zeichen oder Zahlen erforderlich</span>
+  </div>
 
-          <div className="flex flex-col">
-            <label htmlFor="password">Passwort *</label>
-            <input id="password" name="password" type="password" required minLength={6} className="input" />
-            <span className="text-gray-500 text-xs mt-1">
-              Mindestens 6 Zeichen oder Zahlen erforderlich
-            </span>
-          </div>
+  {/* Button */}
+  <div className="md:col-span-2">
+    <button
+      type="submit"
+      disabled={navigation.state === "submitting"}
+      className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+    >
+      {navigation.state === "submitting" ? "Wird gesendet..." : "Registrieren"}
+    </button>
+  </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={navigation.state === "submitting"}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-            >
-              {navigation.state === "submitting" ? "Wird gesendet..." : "Registrieren"}
-            </button>
-          </div>
+  {/* Fehleranzeige */}
+  {"error" in (actionData ?? {}) && (
+    <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData?.error}</p>
+  )}
+</Form>
 
-          {"error" in (actionData ?? {}) && (
-            <p className="text-red-600 text-sm">{actionData?.error}</p>
-          )}
-        </Form>
       )}
     </div>
   );
