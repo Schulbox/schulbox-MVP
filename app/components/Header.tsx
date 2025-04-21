@@ -16,22 +16,27 @@ export default function Header() {
         {/* Navigation + Suche */}
         <div className="flex-1 flex items-center justify-center gap-8">
           {/* Dropdowns */}
-          <nav className="hidden md:flex gap-6 text-sm text-gray-700">
-            <Dropdown title="Webshop">
-              <Link to="/shop">Shop</Link>
-              <Link to="/schulbox-erstellen">Schulbox erstellen</Link>
-              <Link to="/schulboxshop">Schulboxshop</Link>
-            </Dropdown>
-            <Dropdown title="Über uns">
-              <Link to="/team">Team</Link>
-              <Link to="/vision">Die Vision</Link>
-            </Dropdown>
-            <Dropdown title="Partner">
-              <Link to="/lieferpartner">Lieferpartner</Link>
-              <Link to="/werkstaetten">Geschützte Werkstätten</Link>
-              <Link to="/schulen">Schulen</Link>
-            </Dropdown>
-          </nav>
+                <nav className="hidden md:flex gap-8 text-sm text-gray-700 font-medium">
+                    <Link
+                        to="/shop"
+                        className="hover:text-blue-600 transition-colors duration-200"
+                    >
+                        Webshop
+                    </Link>
+                    <Link
+                        to="/schulboxen"
+                        className="hover:text-blue-600 transition-colors duration-200"
+                    >
+                        Schulboxen
+                    </Link>
+                    <Link
+                        to="/ueber-uns"
+                        className="hover:text-blue-600 transition-colors duration-200"
+                    >
+                        Über uns
+                    </Link>
+                </nav>
+
 
           {/* Suche */}
           <div className="flex-1 max-w-xl w-full px-4">
