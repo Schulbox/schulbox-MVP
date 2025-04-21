@@ -2,73 +2,78 @@
 import { Link } from "@remix-run/react";
 import { useState } from "react";
 
-type Props = {
-  user: {
-    email: string;
-    vorname?: string;
-    nachname?: string;
-    role?: string;
-  } | null;
-};
-
-export default function Header({ user }: Props) {
-  const [open, setOpen] = useState(false);
+export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="w-full border-b bg-white px-6 py-4 shadow-sm flex justify-between items-center">
-      <Link to="/" className="flex items-center gap-2">
-        <img src="/logo.png" alt="Schulbox Logo" className="h-10" />
-        <span className="text-xl font-bold text-gray-800 dark:text-white">Schulbox</span>
-      </Link>
+    <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/logo.png" alt="Schulbox Logo" className="h-10" />
+        </Link>
 
-      <nav className="flex items-center gap-6 relative">
-        {user?.role === "lehrkraft" && (
-          <Link to="/konfigurator" className="text-sm text-gray-700 hover:text-blue-600">
-            📦 Box-Konfigurator
-          </Link>
-        )}
+        {/* Navigation + Suche */}
+        <div className="flex-1 flex items-center justify-center gap-8">
+          {/* Dropdowns */}
+          <nav className="hidden md:flex gap-6 text-sm text-gray-700">
+            <Dropdown title="Webshop">
+              <Link to="/shop">Shop</Link>
+              <Link to="/schulbox-erstellen">Schulbox erstellen</Link>
+              <Link to="/schulboxshop">Schulboxshop</Link>
+            </Dropdown>
+            <Dropdown title="Über uns">
+              <Link to="/team">Team</Link>
+              <Link to="/vision">Die Vision</Link>
+            </Dropdown>
+            <Dropdown title="Partner">
+              <Link to="/lieferpartner">Lieferpartner</Link>
+              <Link to="/werkstaetten">Geschützte Werkstätten</Link>
+              <Link to="/schulen">Schulen</Link>
+            </Dropdown>
+          </nav>
 
-        {!user ? (
-          <>
-            <Link to="/login" className="text-sm text-gray-700 hover:text-blue-600">
-              Einloggen
-            </Link>
-            <Link to="/register" className="text-sm text-gray-700 hover:text-blue-600">
-              Registrieren
-            </Link>
-          </>
-        ) : (
-          <div className="relative">
-            <button
-              onClick={() => setOpen(!open)}
-              className="text-sm text-gray-700 hover:text-blue-600"
-            >
-              Hallo, {user.vorname} {user.nachname} ⌄
-            </button>
-            {open && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg border rounded-md p-2 z-50">
-                <Link to="/orders" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                  Meine Bestellungen
-                </Link>
-                <Link to="/profil" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                  Profil bearbeiten
-                </Link>
-                <FormLogout />
-              </div>
-            )}
+          {/* Suche */}
+          <div className="flex-1 max-w-xl w-full px-4">
+            <input
+              type="text"
+              placeholder="Produkt suche Artikelbezeichnung, Artikelnummer"
+              className="w-full border rounded-full px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-        )}
-      </nav>
+        </div>
+
+        {/* Icons */}
+        <div className="flex items-center gap-4 text-gray-600">
+          <Link to="/login" title="Einloggen">
+            <span role="img" aria-label="Login" className="text-xl">👤</span>
+          </Link>
+          <Link to="/cart" title="Warenkorb">
+            <span role="img" aria-label="Warenkorb" className="text-xl">🛒</span>
+          </Link>
+        </div>
+      </div>
     </header>
   );
 }
 
-function FormLogout() {
+function Dropdown({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <form method="post" action="/logout">
-      <button type="submit" className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
-        Ausloggen
-      </button>
-    </form>
+    <div
+      className="relative group"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button className="hover:text-blue-600">{title}</button>
+      {open && (
+        <div className="absolute top-full mt-2 w-48 bg-white border rounded-md shadow-lg z-50 py-2">
+          <div className="flex flex-col space-y-1 px-4 text-sm text-gray-800">
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

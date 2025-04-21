@@ -47,19 +47,15 @@ export async function loader(ctx: LoaderFunctionArgs) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user } = useLoaderData<typeof loader>();
-
   return (
     <html lang="de">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-        <Header user={user} />
-        <main className="px-6 py-10">{children}</main>
+      <body className="bg-white text-gray-900 font-sans">
+        <Header />
+        {children}
         <ScrollRestoration />
         <Scripts />
       </body>
