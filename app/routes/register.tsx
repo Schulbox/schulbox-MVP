@@ -45,7 +45,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const { error: insertError } = await supabase.from("users").insert([
     {
-        email: email, // <- exakt so, nicht Email oder eMail
+        email, // <-- exakt so
         Vorname,
         Nachname,
         Straße,
@@ -54,7 +54,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         Stiege,
         Postleitzahl,
         Ort,
-        Telefonnummer
+        Telefonnummer,
+        role: "user"
     },
   ]);
 
