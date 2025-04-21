@@ -4,9 +4,9 @@ export default function Index() {
   return (
     <div className="text-center px-4 py-10">
       <section className="py-16">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-          🏦 Schulbox – Dein Schulstart mit einem Klick
-        </h1>
+      <h1 className="text-3xl font-bold text-center mb-2">
+         📦 Schulbox – Dein Schulstart mit einem Klick
+      </h1>
         <p className="text-gray-600 max-w-xl mx-auto mb-2">
           Lehrer:innen stellen ein Klassenset zusammen. <br /> Eltern bestellen alles mit 1 Klick.
         </p>
@@ -42,7 +42,7 @@ export default function Index() {
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-2">
-              💜 Sozial & lokal
+               ❤️ Sozial & lokal
             </h3>
             <p className="text-gray-600">
               Verpackung und Beschriftung erfolgen in einer geschützten Werkstätte in Österreich.
