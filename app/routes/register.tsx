@@ -1,7 +1,50 @@
 import { json, redirect } from "@remix-run/node";
-import type { ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { supabase } from "~/lib/supabaseClient";
+
+export async function action({ request }: { request: Request }) {
+  const formData = await request.formData();
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  try {
+    // 1. Benutzer registrieren
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (signUpError || !data.user) {
+      return json({ error: translateError(signUpError?.message || "Unbekannter Fehler") });
+    }
+
+    const userId = data.user.id;
+
+    // 2. Profildaten in Tabelle "Benutzer" speichern
+    const insertData = {
+      user_id: userId,
+      Vorname: formData.get("vorname"),
+      Nachname: formData.get("nachname"),
+      Straße: formData.get("straße"),
+      Hausnummer: formData.get("hausnummer"),
+      Türnummer: formData.get("türnummer"),
+      Stiege: formData.get("stiege"),
+      Postleitzahl: formData.get("postleitzahl"),
+      Ort: formData.get("ort"),
+      Telefonnummer: formData.get("telefonnummer"),
+    };
+
+    const { error: insertError } = await supabase.from("Benutzer").update(insertData).eq("user_id", userId);
+
+    if (insertError) {
+      return json({ error: translateError(insertError.message) });
+    }
+
+    return redirect("/login");
+  } catch (err) {
+    return json({ error: "Ein unerwarteter Fehler ist aufgetreten." });
+  }
+}
 
 function translateError(error: string): string {
   if (error.includes("email")) {
@@ -16,100 +59,59 @@ function translateError(error: string): string {
   return "Es ist ein unbekannter Fehler aufgetreten.";
 }
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const form = await request.formData();
-
-  const email = form.get("email") as string;
-  const password = form.get("password") as string;
-  const Vorname = form.get("vorname") as string;
-  const Nachname = form.get("nachname") as string;
-  const Straße = form.get("straße") as string;
-  const Hausnummer = form.get("hausnummer") as string;
-  const Türnummer = form.get("türnummer") as string;
-  const Stiege = form.get("stiege") as string;
-  const Postleitzahl = form.get("postleitzahl") as string;
-  const Ort = form.get("ort") as string;
-  const Telefonnummer = form.get("telefonnummer") as string;
-
-  const { data, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (authError || !data.user) {
-    return json({ error: translateError(authError?.message ?? "Unbekannter Fehler") }, { status: 400 });
-  }
-
-  const user_id = data.user.id;
-
-  const { error: insertError } = await supabase.from("Benutzer").insert([
-    {
-      user_id,
-      email,
-      Vorname,
-      Nachname,
-      Straße,
-      Hausnummer,
-      Türnummer,
-      Stiege,
-      Postleitzahl,
-      Ort,
-      Telefonnummer,
-    },
-  ]);
-
-  if (insertError) {
-    return json({ error: translateError(insertError.message) }, { status: 400 });
-  }
-
-  return redirect("/login");
-};
-
 export default function Register() {
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen pt-20 px-4">
-      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">📝 Registrieren</h1>
+    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12">
+      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">
+        📝 Registrieren
+      </h1>
+
       <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
         {[
-          ["vorname", "Vorname"],
-          ["nachname", "Nachname"],
-          ["straße", "Straße"],
-          ["hausnummer", "Hausnummer"],
-          ["türnummer", "Türnummer"],
-          ["stiege", "Stiege"],
-          ["postleitzahl", "Postleitzahl"],
-          ["ort", "Ort"],
-          ["telefonnummer", "Telefonnummer"],
-          ["email", "E-Mail", "email"],
-          ["password", "Passwort", "password"],
-        ].map(([name, label, type = "text"]) => (
+          { name: "vorname", label: "Vorname", required: true },
+          { name: "nachname", label: "Nachname", required: true },
+          { name: "straße", label: "Straße", required: true },
+          { name: "hausnummer", label: "Hausnummer", required: true },
+          { name: "türnummer", label: "Türnummer", required: false },
+          { name: "stiege", label: "Stiege", required: false },
+          { name: "postleitzahl", label: "Postleitzahl", required: true },
+          { name: "ort", label: "Ort", required: true },
+          { name: "telefonnummer", label: "Telefonnummer", required: false },
+          { name: "email", label: "E-Mail", required: true },
+          { name: "password", label: "Passwort", required: true, type: "password" },
+        ].map(({ name, label, required, type }) => (
           <div key={name} className="flex flex-col">
-            <label htmlFor={name} className="text-sm mb-1">{label}</label>
+            <label htmlFor={name} className="font-medium text-sm text-gray-700">
+              {label} {required && <span className="text-red-500">*</span>}
+            </label>
             <input
-              name={name}
               id={name}
-              type={type}
-              required={!(name === "türnummer" || name === "stiege" || name === "telefonnummer")}
-              className="border rounded px-3 py-2 text-sm"
+              name={name}
+              type={type || "text"}
+              required={required}
+              className="border border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         ))}
 
-        <div className="md:col-span-2 mt-4">
+        <div className="col-span-1 md:col-span-2 mt-4">
           <button
             type="submit"
             disabled={navigation.state === "submitting"}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
+            className="w-full bg-blue-600 text-white font-medium py-2 rounded hover:bg-blue-700 transition"
           >
             {navigation.state === "submitting" ? "Wird gesendet..." : "Registrieren"}
           </button>
-          {actionData?.error && (
-            <p className="text-red-600 text-sm mt-2">{actionData.error}</p>
-          )}
         </div>
+
+        {actionData?.error && (
+          <p className="col-span-1 md:col-span-2 mt-2 text-red-600 text-sm">
+            {actionData.error}
+          </p>
+        )}
       </Form>
     </div>
   );
