@@ -62,6 +62,7 @@ export default function Register() {
   const navigation = useNavigation();
   const actionData = useActionData<ActionResponse>();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(10);
 
   useEffect(() => {
     if (actionData?.success) {
@@ -71,78 +72,92 @@ export default function Register() {
 
   useEffect(() => {
     if (showSuccess) {
-      setTimeout(() => {
+      const countdown = setInterval(() => {
+        setSecondsLeft((prev) => prev - 1);
+      }, 1000);
+
+      const redirect = setTimeout(() => {
         window.location.href = "/";
-      }, 5000);
+      }, 10000);
+
+      return () => {
+        clearInterval(countdown);
+        clearTimeout(redirect);
+      };
     }
   }, [showSuccess]);
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12 text-sm">
-      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">
-        📝 Registrieren
-      </h1>
+      <h1 className="text-2xl font-bold mb-8 w-full max-w-4xl text-left">📝 Registrieren</h1>
 
       {showSuccess && actionData?.email && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full max-w-4xl">
           Die Registrierung bei Schulbox war erfolgreich, um Ihre E-Mail verifizieren zu können,
-          wurde soeben ein Bestätigungslink an <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
+          wurde soeben ein Bestätigungslink an{" "}
+          <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
+          <div className="mt-2 text-xs text-gray-600">
+            Weiterleitung zur Startseite in {secondsLeft} Sekunden …
+          </div>
         </div>
       )}
 
       {!showSuccess && (
-        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
-          <div className="flex flex-col">
+        <Form method="post" className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-4xl">
+          {/* Vorname / Nachname */}
+          <div className="flex flex-col md:col-span-2">
             <label htmlFor="vorname">Vorname *</label>
             <input id="vorname" name="vorname" required className="input" />
           </div>
-
-          <div className="flex flex-col">
+          <div className="flex flex-col md:col-span-2">
             <label htmlFor="nachname">Nachname *</label>
             <input id="nachname" name="nachname" required className="input" />
           </div>
 
+          {/* Straße */}
           <div className="flex flex-col md:col-span-2">
             <label htmlFor="straße">Straße *</label>
             <input id="straße" name="straße" required className="input" />
           </div>
 
+          {/* Nr. / TürNr. / Stiege */}
           <div className="flex flex-col">
             <label htmlFor="hausnummer">Nr. *</label>
             <input id="hausnummer" name="hausnummer" required className="input w-20" />
           </div>
-
           <div className="flex flex-col">
             <label htmlFor="türnummer">TürNr.</label>
             <input id="türnummer" name="türnummer" className="input w-20" />
           </div>
-
           <div className="flex flex-col">
             <label htmlFor="stiege">Stiege</label>
             <input id="stiege" name="stiege" className="input w-20" />
           </div>
 
+          {/* PLZ / Ort */}
           <div className="flex flex-col">
             <label htmlFor="postleitzahl">Postleitzahl *</label>
             <input id="postleitzahl" name="postleitzahl" required className="input w-24" />
           </div>
-
-          <div className="flex flex-col">
+          <div className="flex flex-col md:col-span-3">
             <label htmlFor="ort">Ort *</label>
             <input id="ort" name="ort" required className="input" />
           </div>
 
-          <div className="flex flex-col md:col-span-2">
+          {/* Telefonnummer */}
+          <div className="flex flex-col md:col-span-4">
             <label htmlFor="telefonnummer">Telefonnummer</label>
             <input id="telefonnummer" name="telefonnummer" className="input" />
           </div>
 
-          <div className="flex flex-col md:col-span-2">
+          {/* E-Mail */}
+          <div className="flex flex-col md:col-span-4">
             <label htmlFor="email">E-Mail *</label>
             <input id="email" name="email" type="email" required className="input" />
           </div>
 
-          <div className="flex flex-col md:col-span-2">
+          {/* Passwort */}
+          <div className="flex flex-col md:col-span-4">
             <label htmlFor="password">Passwort *</label>
             <input id="password" name="password" type="password" required minLength={6} className="input" />
             <span className="text-gray-500 text-xs mt-1">
@@ -150,7 +165,8 @@ export default function Register() {
             </span>
           </div>
 
-          <div className="md:col-span-2">
+          {/* Button */}
+          <div className="md:col-span-4">
             <button
               type="submit"
               disabled={navigation.state === "submitting"}
@@ -160,8 +176,9 @@ export default function Register() {
             </button>
           </div>
 
+          {/* Fehleranzeige */}
           {"error" in (actionData ?? {}) && (
-            <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData?.error}</p>
+            <p className="col-span-4 mt-2 text-red-600 text-sm">{actionData?.error}</p>
           )}
         </Form>
       )}
