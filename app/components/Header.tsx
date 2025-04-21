@@ -15,7 +15,7 @@ export default function Header() {
         </Link>
 
         {/* Navigation - Desktop */}
-        <nav className="hidden md:flex gap-8 text-sm text-gray-700 font-medium">
+        <nav className="hidden md:flex gap-8 text-sm text-gray-700 font-medium ml-8">
           <Link to="/shop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
@@ -24,7 +24,7 @@ export default function Header() {
         {/* Suche + Icons */}
         <div className="flex items-center gap-4 flex-1 justify-end md:justify-end">
           {/* Suchleiste */}
-          <div className="relative w-full max-w-xs hidden sm:block">
+          <div className="relative w-full max-w-md hidden sm:block">
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">🔍</span>
             <input
               type="text"
@@ -34,9 +34,6 @@ export default function Header() {
           </div>
 
           {/* Icons */}
-          <Link to="/login" title="Einloggen">
-            <span role="img" aria-label="Login" className="text-xl">👤</span>
-          </Link>
           <Link to="/cart" title="Warenkorb">
             <span role="img" aria-label="Warenkorb" className="text-xl">🛒</span>
           </Link>
@@ -61,7 +58,7 @@ export default function Header() {
           leaveFrom="translate-x-0 opacity-100"
           leaveTo="translate-x-full opacity-0"
         >
-          <div className="fixed inset-y-0 right-0 w-64 bg-white shadow-lg z-50 px-6 py-6 flex flex-col space-y-4 md:hidden">
+          <div className="fixed inset-y-0 right-0 w-64 bg-white shadow-lg z-50 px-6 py-6 flex flex-col space-y-4 md:hidden items-end text-right">
             <button
               className="self-end text-2xl mb-2"
               onClick={() => setMenuOpen(false)}
@@ -74,13 +71,10 @@ export default function Header() {
             <Link to="/schulboxen" onClick={() => setMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition">Schulboxen</Link>
             <Link to="/ueber-uns" onClick={() => setMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition">Über uns</Link>
 
-            <hr />
+            <hr className="w-full" />
 
             <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700">
               <span role="img" aria-label="Login">👤</span> Einloggen
-            </Link>
-            <Link to="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-gray-700">
-              <span role="img" aria-label="Warenkorb">🛒</span> Warenkorb
             </Link>
           </div>
         </Transition>
