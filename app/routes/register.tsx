@@ -14,29 +14,40 @@ export async function action({ request }: ActionFunctionArgs) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
+  const userMeta = {
+    vorname: formData.get("vorname"),
+    nachname: formData.get("nachname"),
+    straße: formData.get("straße"),
+    hausnummer: formData.get("hausnummer"),
+    türnummer: formData.get("türnummer"),
+    stiege: formData.get("stiege"),
+    postleitzahl: formData.get("postleitzahl"),
+    ort: formData.get("ort"),
+    telefonnummer: formData.get("telefonnummer"),
+    role: "user",
+  };
+
   try {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          vorname: formData.get("vorname"),
-          nachname: formData.get("nachname"),
-          straße: formData.get("straße"),
-          hausnummer: formData.get("hausnummer"),
-          türnummer: formData.get("türnummer"),
-          stiege: formData.get("stiege"),
-          postleitzahl: formData.get("postleitzahl"),
-          ort: formData.get("ort"),
-          telefonnummer: formData.get("telefonnummer"),
-          role: "user",
-        },
-      },
     });
 
     if (signUpError || !data.user) {
       return json<ActionResponse>({
         error: translateError(signUpError?.message || "Unbekannter Fehler"),
+      });
+    }
+
+    // Update `benutzer`-Tabelle nach erfolgreicher Registrierung
+    const { error: updateError } = await supabase
+      .from("benutzer")
+      .update(userMeta)
+      .eq("user_id", data.user.id);
+
+    if (updateError) {
+      return json<ActionResponse>({
+        error: "Daten konnten nicht gespeichert werden.",
       });
     }
 
@@ -62,7 +73,7 @@ export default function Register() {
   const navigation = useNavigation();
   const actionData = useActionData<ActionResponse>();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
     if (actionData?.success) {
@@ -72,18 +83,15 @@ export default function Register() {
 
   useEffect(() => {
     if (showSuccess) {
-      const countdown = setInterval(() => {
-        setSecondsLeft((prev) => prev - 1);
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === 1) {
+            window.location.href = "/";
+          }
+          return prev - 1;
+        });
       }, 1000);
-
-      const redirect = setTimeout(() => {
-        window.location.href = "/";
-      }, 10000);
-
-      return () => {
-        clearInterval(countdown);
-        clearTimeout(redirect);
-      };
+      return () => clearInterval(interval);
     }
   }, [showSuccess]);
 
@@ -93,80 +101,81 @@ export default function Register() {
 
       {showSuccess && actionData?.email && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full max-w-4xl">
-          Die Registrierung bei Schulbox war erfolgreich, um Ihre E-Mail verifizieren zu können,
-          wurde soeben ein Bestätigungslink an{" "}
-          <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
-          <div className="mt-2 text-xs text-gray-600">
-            Weiterleitung zur Startseite in {secondsLeft} Sekunden …
-          </div>
+          <p>
+            Die Registrierung bei Schulbox war erfolgreich, um Ihre E-Mail verifizieren zu können,
+            wurde soeben ein Bestätigungslink an{" "}
+            <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
+          </p>
+          <p className="mt-2 text-sm text-gray-700">
+            … Weiterleitung zur Startseite in {countdown} Sekunden.
+          </p>
+          <p className="text-blue-600 text-sm underline cursor-pointer mt-1" onClick={() => (window.location.href = "/")}>
+            oder hier direkt zur Startseite
+          </p>
         </div>
       )}
 
       {!showSuccess && (
-        <Form method="post" className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-4xl">
-          {/* Vorname / Nachname */}
-          <div className="flex flex-col md:col-span-2">
+        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
+          <div className="flex flex-col">
             <label htmlFor="vorname">Vorname *</label>
-            <input id="vorname" name="vorname" required className="input" />
+            <input id="vorname" name="vorname" required className="border rounded px-2 py-1" />
           </div>
-          <div className="flex flex-col md:col-span-2">
+
+          <div className="flex flex-col">
             <label htmlFor="nachname">Nachname *</label>
-            <input id="nachname" name="nachname" required className="input" />
+            <input id="nachname" name="nachname" required className="border rounded px-2 py-1" />
           </div>
 
-          {/* Straße */}
-          <div className="flex flex-col md:col-span-2">
+          <div className="flex flex-col col-span-2">
             <label htmlFor="straße">Straße *</label>
-            <input id="straße" name="straße" required className="input" />
+            <input id="straße" name="straße" required className="border rounded px-2 py-1" />
           </div>
 
-          {/* Nr. / TürNr. / Stiege */}
           <div className="flex flex-col">
             <label htmlFor="hausnummer">Nr. *</label>
-            <input id="hausnummer" name="hausnummer" required className="input w-20" />
+            <input id="hausnummer" name="hausnummer" required className="border rounded px-2 py-1 w-24" />
           </div>
+
           <div className="flex flex-col">
             <label htmlFor="türnummer">TürNr.</label>
-            <input id="türnummer" name="türnummer" className="input w-20" />
+            <input id="türnummer" name="türnummer" className="border rounded px-2 py-1 w-24" />
           </div>
+
           <div className="flex flex-col">
             <label htmlFor="stiege">Stiege</label>
-            <input id="stiege" name="stiege" className="input w-20" />
+            <input id="stiege" name="stiege" className="border rounded px-2 py-1 w-24" />
           </div>
 
-          {/* PLZ / Ort */}
           <div className="flex flex-col">
             <label htmlFor="postleitzahl">Postleitzahl *</label>
-            <input id="postleitzahl" name="postleitzahl" required className="input w-24" />
+            <input id="postleitzahl" name="postleitzahl" required className="border rounded px-2 py-1 w-28" />
           </div>
-          <div className="flex flex-col md:col-span-3">
+
+          <div className="flex flex-col">
             <label htmlFor="ort">Ort *</label>
-            <input id="ort" name="ort" required className="input" />
+            <input id="ort" name="ort" required className="border rounded px-2 py-1" />
           </div>
 
-          {/* Telefonnummer */}
-          <div className="flex flex-col md:col-span-4">
+          <div className="flex flex-col col-span-2">
             <label htmlFor="telefonnummer">Telefonnummer</label>
-            <input id="telefonnummer" name="telefonnummer" className="input" />
+            <input id="telefonnummer" name="telefonnummer" className="border rounded px-2 py-1" />
           </div>
 
-          {/* E-Mail */}
-          <div className="flex flex-col md:col-span-4">
+          <div className="flex flex-col col-span-2">
             <label htmlFor="email">E-Mail *</label>
-            <input id="email" name="email" type="email" required className="input" />
+            <input id="email" name="email" type="email" required className="border rounded px-2 py-1" />
           </div>
 
-          {/* Passwort */}
-          <div className="flex flex-col md:col-span-4">
+          <div className="flex flex-col col-span-2">
             <label htmlFor="password">Passwort *</label>
-            <input id="password" name="password" type="password" required minLength={6} className="input" />
+            <input id="password" name="password" type="password" required minLength={6} className="border rounded px-2 py-1" />
             <span className="text-gray-500 text-xs mt-1">
               Mindestens 6 Zeichen oder Zahlen erforderlich
             </span>
           </div>
 
-          {/* Button */}
-          <div className="md:col-span-4">
+          <div className="col-span-2">
             <button
               type="submit"
               disabled={navigation.state === "submitting"}
@@ -176,9 +185,8 @@ export default function Register() {
             </button>
           </div>
 
-          {/* Fehleranzeige */}
           {"error" in (actionData ?? {}) && (
-            <p className="col-span-4 mt-2 text-red-600 text-sm">{actionData?.error}</p>
+            <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData?.error}</p>
           )}
         </Form>
       )}
