@@ -35,8 +35,8 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 font-medium ml-6">
-          <Link to="/index" className="hover:text-blue-600">Webshop</Link>
-          <Link to="/index" className="hover:text-blue-600">Schulboxen</Link>
+          <Link to="/shop" className="hover:text-blue-600">Webshop</Link>
+          <Link to="/schulbox" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
         </nav>
 
