@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../app/lib/supabaseClient.ts"],
+  "sourcesContent": ["// REMIX HMR BEGIN\nimport * as __hmr__ from \"remix:hmr\";\nif (import.meta) {\nimport.meta.hot = __hmr__.createHotContext(\n//@ts-expect-error\n\"app\\\\lib\\\\supabaseClient.ts\"\n);\nimport.meta.hot.lastModified = \"1745247910424.8694\";\n}\n// REMIX HMR END\n\nimport { createClient } from \"@supabase/supabase-js\";\r\n\r\nconst supabaseUrl = import.meta.env.VITE_SUPABASE_URL;\r\nconst supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;\r\n\r\nif (!supabaseUrl || !supabaseAnonKey) {\r\n  throw new Error(\"Supabase URL oder Anon Key fehlt in den Umgebungsvariablen.\");\r\n}\r\n\r\nexport const supabase = createClient(supabaseUrl, supabaseAnonKey);\r\n"],
+  "mappings": ";;;;;;;;;AAWA;AATA,IAAI,aAAa;AACjB,cAAY,MAAc;AAAA;AAAA,IAE1B;AAAA,EACA;AACA,cAAY,IAAI,eAAe;AAC/B;AAKA,IAAM,cAAc,YAAY,IAAI;AACpC,IAAM,kBAAkB,YAAY,IAAI;AAExC,IAAI,CAAC,eAAe,CAAC,iBAAiB;AACpC,QAAM,IAAI,MAAM,6DAA6D;AAC/E;AAEO,IAAM,WAAW,aAAa,aAAa,eAAe;",
+  "names": []
+}

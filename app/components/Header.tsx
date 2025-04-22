@@ -1,4 +1,3 @@
-// app/components/Header.tsx
 import { Link } from "@remix-run/react";
 import { useState } from "react";
 import { Transition } from "@headlessui/react";
@@ -9,9 +8,12 @@ export default function Header() {
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo: Mobil = Icon, Desktop = Vollversion */}
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Schulbox Logo" className="h-12" />
+          {/* Mobile Icon */}
+          <img src="/logo-box.png" alt="Schulbox Icon" className="h-10 block md:hidden" />
+          {/* Desktop Logo */}
+          <img src="/logo.png" alt="Schulbox Logo" className="h-10 hidden md:block" />
         </Link>
 
         {/* Mobile Search (always visible between logo and cart) */}
@@ -21,7 +23,7 @@ export default function Header() {
             <input
               type="text"
               placeholder="Produkt suche Artikelbezeichnung, Artikelnummer"
-              className="w-full border rounded-full pl-10 pr-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-100 border border-gray-300 rounded-full pl-10 pr-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
