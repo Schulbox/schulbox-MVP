@@ -9,24 +9,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const email = form.get("email") as string;
   const password = form.get("password") as string;
 
-  // E-Mail Validation
-  if (!email) {
-    return json({ error: "Bitte E-Mail eingeben." });
-  }
-  if (!/\S+@\S+\.\S+/.test(email)) {
+  // Überprüfung der E-Mail-Adresse
+  if (!email || !email.includes('@') || !email.includes('.')) {
     return json({ error: "Bitte gültige E-Mail Adresse eingeben." });
   }
 
-  // Passwort Validation
   if (!password) {
     return json({ error: "Bitte Passwort eingeben." });
   }
 
-  // Login Versuchen
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    if (error.message.includes("invalid login credentials")) {
+    if (error.message.includes('Invalid login credentials')) {
       return json({ error: "Passwort nicht korrekt. Bitte prüfe das Passwort und gebe es erneut ein." });
     }
     return json({ error: error.message });
