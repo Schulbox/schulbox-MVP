@@ -26,19 +26,19 @@ export default function Index() {
           Warum Schulbox?
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:ring-2 hover:ring-blue-500 transition-all duration-300 ease-in-out transform hover:scale-105">
             <h3 className="text-lg font-semibold mb-2 text-gray-800">📦 Alles auf einen Klick</h3>
             <p className="text-gray-600 text-sm">
               Kein mühsames Zusammensuchen von Schulmaterialien. Einfach bestellen und fertig.
             </p>
           </div>
-          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:ring-2 hover:ring-blue-500 transition-all duration-300 ease-in-out transform hover:scale-105">
             <h3 className="text-lg font-semibold mb-2 text-gray-800">💌 Persönlich beschriftet</h3>
             <p className="text-gray-600 text-sm">
               Alle Materialien werden auf Wunsch mit dem Namen des Kindes versehen – fix & fertig.
             </p>
           </div>
-          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+          <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:ring-2 hover:ring-blue-500 transition-all duration-300 ease-in-out transform hover:scale-105">
             <h3 className="text-lg font-semibold mb-2 text-gray-800">❤️ Sozial & lokal</h3>
             <p className="text-gray-600 text-sm">
               Verpackung und Beschriftung erfolgen in einer geschützten Werkstätte in Österreich.
