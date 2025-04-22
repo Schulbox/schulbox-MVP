@@ -5,6 +5,11 @@ import { Transition } from "@headlessui/react";
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Funktion zum Schließen des Menüs nach dem Klick auf einen Link
+  const handleLinkClick = () => {
+    setMenuOpen(false);
+  };
+
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -30,8 +35,8 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 font-medium ml-6">
-          <Link to="/shop" className="hover:text-blue-600">Webshop</Link>
-          <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
+          <Link to="/index" className="hover:text-blue-600">Webshop</Link>
+          <Link to="/index" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
         </nav>
 
@@ -59,7 +64,10 @@ export default function Header() {
           </Link>
 
           {/* Hamburger Button */}
-          <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
+          <button
+            className={`md:hidden ${menuOpen ? "rotate-90" : ""} transition-transform`}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
             <span className="text-2xl">☰</span>
           </button>
         </div>
@@ -84,11 +92,35 @@ export default function Header() {
             ✕
           </button>
           <div className="mt-10 space-y-4 text-right">
-            <Link to="/shop" className="block text-gray-800 font-medium hover:text-blue-600">Webshop</Link>
-            <Link to="/schulboxen" className="block text-gray-800 font-medium hover:text-blue-600">Schulboxen</Link>
-            <Link to="/ueber-uns" className="block text-gray-800 font-medium hover:text-blue-600">Über uns</Link>
+            <Link
+              to="/shop"
+              className="block text-gray-800 font-medium hover:text-blue-600"
+              onClick={handleLinkClick}
+            >
+              Webshop
+            </Link>
+            <Link
+              to="/schulboxen"
+              className="block text-gray-800 font-medium hover:text-blue-600"
+              onClick={handleLinkClick}
+            >
+              Schulboxen
+            </Link>
+            <Link
+              to="/ueber-uns"
+              className="block text-gray-800 font-medium hover:text-blue-600"
+              onClick={handleLinkClick}
+            >
+              Über uns
+            </Link>
             <hr />
-            <Link to="/login" className="block text-gray-800 font-medium hover:text-blue-600">👤 Einloggen</Link>
+            <Link
+              to="/login"
+              className="block text-gray-800 font-medium hover:text-blue-600"
+              onClick={handleLinkClick}
+            >
+              👤 Einloggen
+            </Link>
           </div>
         </div>
       </Transition>
