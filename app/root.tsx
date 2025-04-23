@@ -8,6 +8,7 @@ import {
 } from "@remix-run/react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { getSupabaseTokensFromSession } from "~/lib/session.server"; // 👈 hinzugefügt
 import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
 import "./tailwind.css";
@@ -35,9 +36,13 @@ export const links: LinksFunction = () => [
 
 // ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
-  const supabase = getSupabaseServerClient(ctx);
-  const { data: { user } } = await supabase.auth.getUser();
+  const { request } = ctx;
+  const { refresh_token } = await getSupabaseTokensFromSession(request);
+  const supabase = getSupabaseServerClient(ctx, refresh_token ?? undefined);
+  
+  
 
+  const { data: { user } } = await supabase.auth.getUser();
   console.log("[loader] Eingeloggter User:", user);
 
   let profile: User = null;
@@ -48,7 +53,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
       .select("vorname, nachname, role")
       .eq("user_id", user.id)
       .single();
-  
+
     if (error) {
       console.error("[loader] Fehler beim Laden des Profils:", error.message);
     } else {
@@ -60,12 +65,10 @@ export async function loader(ctx: LoaderFunctionArgs) {
   } else {
     console.warn("[loader] Kein user.id verfügbar!");
   }
-  
 
   console.log("[loader] Fertiges Profil:", profile);
   return json({ user: profile });
 }
-
 
 // ✅ Finale App mit HTML-Wrapper, Header und Outlet
 export default function App() {
