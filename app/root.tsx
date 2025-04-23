@@ -1,17 +1,23 @@
-// app/root.tsx
 import {
   Links,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
+  useLoaderData
 } from "@remix-run/react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
-
 import "./tailwind.css";
+
+// 💡 Typ für das User-Profil
+export type User = {
+  vorname?: string;
+  nachname?: string;
+  role?: string;
+  email: string; // Pflichtfeld, um TS-Fehler zu vermeiden
+} | null;
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -26,25 +32,29 @@ export const links: LinksFunction = () => [
   },
 ];
 
+// ✅ Loader-Funktion mit vollständigem context
 export async function loader(ctx: LoaderFunctionArgs) {
   const supabase = getSupabaseServerClient(ctx);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  let profile = null;
+  let profile: User = null;
 
-  if (user) {
+  if (user?.email) {
     const { data } = await supabase
       .from("users")
       .select("vorname, nachname, role")
       .eq("user_id", user.id)
       .single();
-    profile = { email: user.email, ...data };
+
+    profile = {
+      email: user.email,
+      ...data,
+    };
   }
 
   return json({ user: profile });
 }
+
 
 export function CustomMeta() {
   return (
@@ -57,6 +67,8 @@ export function CustomMeta() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
     <html lang="de">
       <head>
@@ -64,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="bg-white text-gray-900 font-sans">
-        <Header />
+        <Header user={user} />
         <main>{children}</main>
         <ScrollRestoration />
         <Scripts />

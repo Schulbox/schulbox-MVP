@@ -1,11 +1,18 @@
-import { Link, useLoaderData } from "@remix-run/react";
+// app/components/Header.tsx
+import { Link } from "@remix-run/react";
 import { useState } from "react";
 import { Transition } from "@headlessui/react";
 
-export default function Header() {
+type User = {
+  vorname?: string;
+  nachname?: string;
+  role?: string;
+  email: string;
+} | null;
+
+export default function Header({ user }: { user: User }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user } = useLoaderData<typeof import("~/root").loader>();
 
   const handleLinkClick = () => {
     setMenuOpen(false);

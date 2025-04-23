@@ -3,7 +3,7 @@ import { Form, useActionData, useNavigation, Link } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { supabase } from "~/lib/supabaseClient";
-import { getSession, commitSession } from "~/lib/session.server";
+import { setSupabaseSessionCookie } from "~/lib/session.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const form = await request.formData();
@@ -16,14 +16,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({ error: error?.message || "Login fehlgeschlagen." });
   }
 
-  // Session setzen
-  const session = await getSession(request.headers.get("Cookie"));
-  session.set("access_token", data.session.access_token);
-  session.set("user", data.user); // optional: nur wenn du was vom User brauchst
+  const cookie = await setSupabaseSessionCookie(
+    request,
+    data.session.access_token,
+    data.session.refresh_token
+  );
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await commitSession(session),
+      "Set-Cookie": cookie,
     },
   });
 };
