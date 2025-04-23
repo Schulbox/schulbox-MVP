@@ -18,17 +18,17 @@ export const { getSession, commitSession, destroySession } = sessionStorage;
 /**
  * ✅ Speichert nur noch den Supabase Refresh Token in der Session
  */
+// app/lib/session.server.ts
 export async function setSupabaseSessionCookie(
   request: Request,
-  access_token: string,
   refresh_token: string
 ) {
   const session = await getSession(request.headers.get("Cookie"));
-  session.set("supabaseAccessToken", access_token);
   session.set("supabaseRefreshToken", refresh_token);
-
-  return await commitSession(session);
-}
+  return await commitSession(session, {
+    path: "/", // wichtig!
+  });
+}  
 
 /**
  * ✅ Holt den Refresh Token aus der Session (z. B. im Loader)
