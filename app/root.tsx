@@ -42,7 +42,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
 
   if (user?.email) {
     const { data } = await supabase
-      .from("users")
+      .from("benutzer")
       .select("vorname, nachname, role")
       .eq("user_id", user.id)
       .single();
