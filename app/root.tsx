@@ -47,8 +47,10 @@ export async function loader(ctx: LoaderFunctionArgs) {
   // 👉 Supabase-Client mit Token erzeugen
   const supabase = getSupabaseServerClient(ctx, refresh_token ?? undefined);
 
+  // 🔄 Statt getUser: getSession nutzen, um user zu bekommen
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
 
-  const { data: { user } } = await supabase.auth.getUser();
   console.log("[loader] Eingeloggter User:", user);
 
   let profile: User = null;
@@ -75,6 +77,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
   console.log("[loader] Fertiges Profil:", profile);
   return json({ user: profile });
 }
+
 
 // ✅ Fehlerbehandlung für die gesamte App
 export function ErrorBoundary() {
