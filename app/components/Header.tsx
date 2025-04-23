@@ -35,7 +35,7 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 font-medium ml-6">
-          <Link to="/shop" className="hover:text-blue-600">Webshop</Link>
+          <Link to="/webshop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulbox" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
         </nav>
@@ -93,7 +93,7 @@ export default function Header() {
           </button>
           <div className="mt-10 space-y-4 text-right">
             <Link
-              to="/shop"
+              to="/webshop"
               className="block text-gray-800 font-medium hover:text-blue-600"
               onClick={handleLinkClick}
             >
