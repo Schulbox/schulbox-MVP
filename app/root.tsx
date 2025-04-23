@@ -3,7 +3,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData
+  useLoaderData,
 } from "@remix-run/react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -32,7 +32,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-// ✅ Loader-Funktion mit vollständigem context
+// ✅ Loader-Funktion mit vollständigem Kontext
 export async function loader(ctx: LoaderFunctionArgs) {
   const supabase = getSupabaseServerClient(ctx);
   const { data: { user } } = await supabase.auth.getUser();
@@ -55,7 +55,6 @@ export async function loader(ctx: LoaderFunctionArgs) {
   return json({ user: profile });
 }
 
-
 export function CustomMeta() {
   return (
     <>
@@ -66,9 +65,8 @@ export function CustomMeta() {
   );
 }
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  const { user } = useLoaderData<typeof loader>();
-
+// ⬇ Layout bekommt user explizit als Prop
+export function Layout({ children, user }: { children: React.ReactNode; user: User }) {
   return (
     <html lang="de">
       <head>
@@ -85,6 +83,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ⬇ App nutzt useLoaderData und gibt user an Layout weiter
 export default function App() {
-  return <Outlet />;
+  const { user } = useLoaderData<typeof loader>();
+  return (
+    <Layout user={user}>
+      <Outlet />
+    </Layout>
+  );
 }
