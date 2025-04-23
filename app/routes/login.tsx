@@ -1,20 +1,31 @@
+// app/routes/login.tsx
 import { Form, useActionData, useNavigation, Link } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { supabase } from "~/lib/supabaseClient";
+import { getSession, commitSession } from "~/lib/session.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const form = await request.formData();
   const email = form.get("email") as string;
   const password = form.get("password") as string;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    return json({ error: error.message });
+  if (error || !data.session) {
+    return json({ error: error?.message || "Login fehlgeschlagen." });
   }
 
-  return redirect("/");
+  // Session setzen
+  const session = await getSession(request.headers.get("Cookie"));
+  session.set("access_token", data.session.access_token);
+  session.set("user", data.user); // optional: nur wenn du was vom User brauchst
+
+  return redirect("/", {
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  });
 };
 
 export default function Login() {

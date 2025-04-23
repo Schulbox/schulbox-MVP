@@ -46,7 +46,6 @@ export async function loader(ctx: LoaderFunctionArgs) {
   return json({ user: profile });
 }
 
-// 💡 Umbenannt: Vermeidet Konflikt mit Remix 'Meta'
 export function CustomMeta() {
   return (
     <>
@@ -66,7 +65,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-white text-gray-900 font-sans">
         <Header />
-        {children}
+        <main>{children}</main>
         <ScrollRestoration />
         <Scripts />
       </body>
