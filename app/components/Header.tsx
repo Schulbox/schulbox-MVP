@@ -66,7 +66,10 @@ export default function Header({ user }: { user: User }) {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="text-sm font-medium hover:text-blue-600"
               >
-                Eingeloggt als {user.vorname} {user.nachname} ⌄
+                        Eingeloggt als{" "}
+                        {user.vorname || user.nachname
+                          ? `${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()
+                          : user.email} ⌄
               </button>
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 bg-white border rounded shadow-lg py-2 w-48 z-50">
