@@ -46,18 +46,21 @@ export async function loader(ctx: LoaderFunctionArgs) {
     const { data, error } = await supabase
       .from("benutzer")
       .select("vorname, nachname, role")
-      .eq("user_id", user.id) // 🟢 das war das Problem!
+      .eq("user_id", user.id)
       .single();
-
+  
     if (error) {
       console.error("[loader] Fehler beim Laden des Profils:", error.message);
     } else {
       profile = {
-        email: user?.email || "unbekannt@example.com",
+        email: user.email ?? "unbekannt",
         ...data,
-      };    
+      };
     }
+  } else {
+    console.warn("[loader] Kein user.id verfügbar!");
   }
+  
 
   console.log("[loader] Fertiges Profil:", profile);
   return json({ user: profile });
