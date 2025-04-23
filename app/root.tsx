@@ -17,7 +17,7 @@ export type User = {
   vorname?: string;
   nachname?: string;
   role?: string;
-  email: string; // Pflichtfeld
+  email: string;
 } | null;
 
 export const links: LinksFunction = () => [
@@ -33,7 +33,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-// ✅ Serverseitiger Loader
+// ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
   const supabase = getSupabaseServerClient(ctx);
   const { data: { user } } = await supabase.auth.getUser();
@@ -56,38 +56,26 @@ export async function loader(ctx: LoaderFunctionArgs) {
   return json({ user: profile });
 }
 
-// 🧠 Head-Metadaten
-export function CustomMeta() {
-  return (
-    <>
-      <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>Schulbox</title>
-    </>
-  );
-}
-
-// ✅ Remix-konformes Layout (holt sich user selbst per useLoaderData)
-export function Layout({ children }: { children: React.ReactNode }) {
+// ✅ Finale App mit HTML-Wrapper, Header und Outlet
+export default function App() {
   const { user } = useLoaderData<typeof loader>();
 
   return (
     <html lang="de">
       <head>
-        <CustomMeta />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Schulbox</title>
         <Links />
       </head>
       <body className="bg-white text-gray-900 font-sans">
         <Header user={user} />
-        <main>{children}</main>
+        <main>
+          <Outlet />
+        </main>
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
   );
-}
-
-// ⬇ App gibt einfach Outlet zurück – wie vorgesehen
-export default function App() {
-  return <Outlet />;
 }
