@@ -1,3 +1,4 @@
+// app/root.tsx
 import {
   Links,
   Outlet,
@@ -16,7 +17,7 @@ export type User = {
   vorname?: string;
   nachname?: string;
   role?: string;
-  email: string; // Pflichtfeld, um TS-Fehler zu vermeiden
+  email: string; // Pflichtfeld
 } | null;
 
 export const links: LinksFunction = () => [
@@ -32,7 +33,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-// ✅ Loader-Funktion mit vollständigem Kontext
+// ✅ Serverseitiger Loader
 export async function loader(ctx: LoaderFunctionArgs) {
   const supabase = getSupabaseServerClient(ctx);
   const { data: { user } } = await supabase.auth.getUser();
@@ -55,6 +56,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
   return json({ user: profile });
 }
 
+// 🧠 Head-Metadaten
 export function CustomMeta() {
   return (
     <>
@@ -65,8 +67,10 @@ export function CustomMeta() {
   );
 }
 
-// ⬇ Layout bekommt user explizit als Prop
-export function Layout({ children, user }: { children: React.ReactNode; user: User }) {
+// ✅ Remix-konformes Layout (holt sich user selbst per useLoaderData)
+export function Layout({ children }: { children: React.ReactNode }) {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
     <html lang="de">
       <head>
@@ -83,12 +87,7 @@ export function Layout({ children, user }: { children: React.ReactNode; user: Us
   );
 }
 
-// ⬇ App nutzt useLoaderData und gibt user an Layout weiter
+// ⬇ App gibt einfach Outlet zurück – wie vorgesehen
 export default function App() {
-  const { user } = useLoaderData<typeof loader>();
-  return (
-    <Layout user={user}>
-      <Outlet />
-    </Layout>
-  );
+  return <Outlet />;
 }
