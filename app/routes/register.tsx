@@ -29,7 +29,7 @@ export async function action({ request }: ActionFunctionArgs) {
           postleitzahl: formData.get("postleitzahl"),
           ort: formData.get("ort"),
           telefonnummer: formData.get("telefonnummer"),
-          role: "user",
+          role: "lehrkraft",
         },
       },
     });

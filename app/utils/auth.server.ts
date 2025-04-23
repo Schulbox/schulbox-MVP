@@ -24,9 +24,9 @@ export async function requireLehrkraft(ctx: LoaderFunctionArgs) {
 
   if (!user) throw redirect("/login");
 
-  // Hole user-Daten aus "users"-Tabelle
+  // Hole user-Daten aus "benutzer"-Tabelle
   const { data, error } = await supabase
-    .from("users")
+    .from("benutzer")
     .select("role")
     .eq("user_id", user.id)
     .single();
