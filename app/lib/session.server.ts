@@ -16,27 +16,23 @@ export const sessionStorage = createCookieSessionStorage({
 export const { getSession, commitSession, destroySession } = sessionStorage;
 
 /**
- * Speichert Supabase-Zugangsdaten in der Session
+ * ✅ Speichert nur noch den Supabase Refresh Token in der Session
  */
 export async function setSupabaseSessionCookie(
   request: Request,
-  access_token: string,
   refresh_token: string
 ) {
   const session = await getSession(request.headers.get("Cookie"));
-  session.set("supabaseAccessToken", access_token);
   session.set("supabaseRefreshToken", refresh_token);
-
   return await commitSession(session);
 }
 
 /**
- * Holt Tokens aus der Session (optional für Supabase-Client)
+ * ✅ Holt den Refresh Token aus der Session (z. B. im Loader)
  */
 export async function getSupabaseTokensFromSession(request: Request) {
   const session = await getSession(request.headers.get("Cookie"));
   return {
-    access_token: session.get("supabaseAccessToken") as string | null,
     refresh_token: session.get("supabaseRefreshToken") as string | null,
   };
 }

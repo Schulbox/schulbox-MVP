@@ -18,9 +18,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const cookie = await setSupabaseSessionCookie(
     request,
-    data.session.access_token,
     data.session.refresh_token
   );
+  
 
   return redirect("/", {
     headers: {
