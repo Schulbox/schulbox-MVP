@@ -10,17 +10,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const email = form.get("email") as string;
   const password = form.get("password") as string;
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error || !data.session) {
     return json({ error: error?.message || "Login fehlgeschlagen." });
   }
 
+  // Optional: Debug-Log für Vercel Logs
+  console.log("✅ Login erfolgreich:", { email, user: data.user });
+
+  // Token in Session speichern
   const cookie = await setSupabaseSessionCookie(
     request,
+    data.session.access_token,
     data.session.refresh_token
   );
-  
 
   return redirect("/", {
     headers: {

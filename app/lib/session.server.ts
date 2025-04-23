@@ -20,10 +20,13 @@ export const { getSession, commitSession, destroySession } = sessionStorage;
  */
 export async function setSupabaseSessionCookie(
   request: Request,
+  access_token: string,
   refresh_token: string
 ) {
   const session = await getSession(request.headers.get("Cookie"));
+  session.set("supabaseAccessToken", access_token);
   session.set("supabaseRefreshToken", refresh_token);
+
   return await commitSession(session);
 }
 
