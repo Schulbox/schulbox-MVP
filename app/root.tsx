@@ -36,34 +36,33 @@ export const links: LinksFunction = () => [
 // ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
   const supabase = getSupabaseServerClient(ctx);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  console.log("🔎 [root.loader] Supabase user:", user);
+  console.log("[loader] Eingeloggter User:", user);
 
   let profile: User = null;
 
-  if (user?.email) {
+  if (user?.id) {
     const { data, error } = await supabase
       .from("benutzer")
       .select("vorname, nachname, role")
-      .eq("user_id", user.id)
+      .eq("user_id", user.id) // 🟢 das war das Problem!
       .single();
 
-    console.log("🔎 [root.loader] Daten aus Tabelle 'benutzer':", data);
-    if (error) console.error("❌ [root.loader] Fehler beim Laden des Profils:", error);
-
-    profile = {
-      email: user.email,
-      ...data,
-    };
+    if (error) {
+      console.error("[loader] Fehler beim Laden des Profils:", error.message);
+    } else {
+      profile = {
+        email: user?.email || "unbekannt@example.com",
+        ...data,
+      };    
+    }
   }
 
-  console.log("✅ [root.loader] Fertiges Profil für Layout:", profile);
-
+  console.log("[loader] Fertiges Profil:", profile);
   return json({ user: profile });
 }
+
 
 // ✅ Finale App mit HTML-Wrapper, Header und Outlet
 export default function App() {
