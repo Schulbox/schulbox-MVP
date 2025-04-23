@@ -1,15 +1,17 @@
 // app/lib/shopify/auth.server.ts
-import { shopify, shopifyStore } from "./config.server.ts";
+import { shopify, shopifyStore } from "./config.server";
 import { redirect } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { supabase } from "~/lib/supabaseClient";
+import type { Session } from "@shopify/shopify-api";
 
 // Generiert die OAuth-URL für die Shopify-Autorisierung
-export function getAuthUrl() {
+export function getAuthUrl(request: Request) {
   return shopify.auth.begin({
     shop: shopifyStore,
     callbackPath: "/auth/callback",
     isOnline: true,
+    rawRequest: request,
   });
 }
 
@@ -71,19 +73,19 @@ export async function hasValidAccessToken() {
 }
 
 // Erstellt einen authentifizierten Shopify-Client mit dem gespeicherten Token
+// Erstellt einen authentifizierten Shopify-Client mit dem gespeicherten Token
 export async function getAuthenticatedClient() {
   const accessToken = await getAccessToken();
-  
+
   if (!accessToken) {
     throw new Error("Kein Access Token vorhanden");
   }
 
-  const client = new shopify.clients.Rest({
-    session: {
-      shop: shopifyStore,
-      accessToken: accessToken,
-    },
-  });
+  const session = shopify.session.customAppSession(shopifyStore);
+  session.accessToken = accessToken;
+  session.scope = process.env.SHOPIFY_SCOPES || "";
 
+  const client = new shopify.clients.Rest({ session });
   return client;
 }
+
