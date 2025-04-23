@@ -1,6 +1,8 @@
 // app/lib/shopify/config.server.ts
 import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
 import { restResources } from "@shopify/shopify-api/rest/admin/2023-10";
+import "@shopify/shopify-api/adapters/node";
+
 
 // Diese Werte sollten in einer .env Datei gespeichert werden
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || "PLACEHOLDER_API_KEY";
