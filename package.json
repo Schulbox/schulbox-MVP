@@ -15,6 +15,7 @@
     "@remix-run/node": "^2.16.5",
     "@remix-run/react": "^2.16.5",
     "@remix-run/serve": "^2.16.5",
+    "@shopify/shopify-api": "^11.12.0",
     "@supabase/auth-helpers-remix": "^0.4.0",
     "@supabase/supabase-js": "^2.49.4",
     "isbot": "^4.1.0",

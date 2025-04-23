@@ -14,7 +14,7 @@ const SCOPES = [
   "read_customers",
   "write_customers"
 ];
-const HOST = process.env.HOST || "https://schulbox-app.vercel.app";
+const HOST = process.env.HOST!;
 
 export const shopify = shopifyApi({
   apiKey: SHOPIFY_API_KEY,
