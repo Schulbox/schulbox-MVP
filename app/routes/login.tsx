@@ -22,12 +22,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Optional: Debug-Log für Vercel Logs
   console.log("✅ Login erfolgreich:", { email, user: data.user });
 
-  // Token in Session speichern
-  const cookie = await setSupabaseSessionCookie(
-    request,
-    data.session.access_token,
-    data.session.refresh_token
-  );
+  // Nur refresh_token speichern (klein genug für Cookie)
+  const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token);
 
   return redirect("/", {
     headers: {
