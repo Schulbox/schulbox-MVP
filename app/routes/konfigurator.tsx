@@ -6,6 +6,26 @@ import { useState } from "react";
 import { hasValidAccessToken } from "~/lib/shopify/auth.server";
 import { getAllProducts, createSchulboxProduct } from "~/lib/shopify/products.server";
 
+// 🧠 Produkttyp definieren
+type ProductType = {
+  id: string;
+  title: string;
+  variants: {
+    price: string;
+  }[];
+};
+
+type CreatedProduct = {
+  handle: string;
+};
+
+type ActionResult = {
+  success: boolean;
+  message: string;
+  product?: CreatedProduct;
+};
+
+
 export const loader = async (ctx: LoaderFunctionArgs) => {
   // Stelle sicher, dass nur Lehrkräfte Zugriff haben
   const user = await requireLehrkraft(ctx);
@@ -69,14 +89,14 @@ export async function action({ request }: LoaderFunctionArgs) {
       totalPrice
     });
     
-    return json({ 
+    return json<ActionResult>({ 
       success: true, 
       product: newProduct,
       message: "Schulbox wurde erfolgreich erstellt!"
     });
   } catch (error) {
     console.error("Fehler beim Erstellen der Schulbox:", error);
-    return json({ 
+    return json<ActionResult>({
       success: false, 
       message: "Fehler beim Erstellen der Schulbox. Bitte versuchen Sie es erneut."
     });
@@ -90,10 +110,10 @@ export default function Konfigurator() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
   // Berechne den Gesamtpreis der ausgewählten Produkte
-  const calculateTotalPrice = () => {
+  const calculateTotalPrice = (): number => {
     return products
-      .filter(product => selectedProducts.includes(product.id))
-      .reduce((sum, product) => sum + parseFloat(product.variants[0].price), 0);
+    .filter((product: ProductType) => selectedProducts.includes(product.id))
+    .reduce((sum: number, product: ProductType) => sum + parseFloat(product.variants[0].price), 0);
   };
   
   const totalPrice = calculateTotalPrice();
@@ -136,7 +156,10 @@ export default function Konfigurator() {
               </p>
               <div className="mt-4 flex gap-4">
                 <a 
-                  href={`https://nqwde0-ua.myshopify.com/products/${actionData.product.handle}`} 
+                  href={`https://nqwde0-ua.myshopify.com/products/${actionData?.product?.handle ?? ""}`}
+
+
+
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
@@ -227,7 +250,7 @@ export default function Konfigurator() {
                   <p className="text-gray-500">Keine Produkte verfügbar.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {products.map(product => (
+                    {products.map((product: ProductType) => (
                       <div 
                         key={product.id} 
                         className={`border rounded-md p-4 cursor-pointer transition ${
