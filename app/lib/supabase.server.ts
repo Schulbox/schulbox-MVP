@@ -6,6 +6,11 @@ export function getSupabaseServerClient(
   ctx: LoaderFunctionArgs,
   refresh_token?: string
 ) {
+
+  console.log("ENV SUPABASE_URL:", process.env.SUPABASE_URL);
+  console.log("ENV SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY);
+  
+
   const enhancedOptions = {
     request: ctx.request,
     response: new Response(), // Dummy Response
