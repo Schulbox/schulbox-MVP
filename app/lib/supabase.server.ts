@@ -10,21 +10,17 @@ export function getSupabaseServerClient(
   const supabaseUrl = process.env.SUPABASE_URL!;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 
-  // 🧠 Letzter Versuch, korrekt mit Header-Manipulation statt nicht unterstütztem cookie-Override
   const headers = new Headers(ctx.request.headers);
 
-  if (refresh_token) {
-    headers.append("cookie", `sb-refresh-token=${refresh_token}`);
-  }
-  if (access_token) {
-    headers.append("cookie", `sb-access-token=${access_token}`);
-  }
+  // Fake die Tokens über den Cookie-Header
+  const existing = headers.get("cookie") ?? "";
+  const cookies: string[] = [];
+  if (refresh_token) cookies.push(`sb-refresh-token=${refresh_token}`);
+  if (access_token) cookies.push(`sb-access-token=${access_token}`);
+  headers.set("cookie", [existing, ...cookies].filter(Boolean).join("; "));
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
-    request: new Request(ctx.request.url, {
-      method: ctx.request.method,
-      headers,
-    }),
+    request: new Request(ctx.request.url, { headers }),
     response: new Response(),
   });
 }

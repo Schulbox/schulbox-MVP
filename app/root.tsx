@@ -40,97 +40,66 @@ export async function loader(ctx: LoaderFunctionArgs) {
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
 
   if (!refresh_token || !access_token) {
-    console.log("[root.loader] Tokens nicht vollständig, User ist nicht eingeloggt");
+    console.log("[root.loader] Tokens fehlen");
     return json({ user: null });
   }
 
-  const supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
+  let supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
 
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      console.error("[root.loader] Fehler bei auth.getUser():", userError?.message);
+  if (error || !user) {
+    console.warn("[root.loader] Fehler bei getUser, versuche Refresh");
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({
-        refresh_token,
-      });
+    const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession({
+      refresh_token,
+    });
 
-      if (sessionError || !sessionData.session) {
-        console.error("[root.loader] Session-Refresh fehlgeschlagen:", sessionError?.message);
-        return json({ user: null });
-      }
-
-      const newCookie = await setSupabaseSessionCookie(
-        request,
-        sessionData.session.refresh_token,
-        sessionData.session.access_token
-      );
-
-      const refreshedSupabase = getSupabaseServerClient(
-        ctx,
-        sessionData.session.refresh_token,
-        sessionData.session.access_token
-      );
-
-      const {
-        data: { user: refreshedUser },
-        error: refreshedError,
-      } = await refreshedSupabase.auth.getUser();
-
-      if (refreshedError || !refreshedUser) {
-        console.error("[root.loader] Fehler nach Session-Refresh:", refreshedError?.message);
-        return json({ user: null }, { headers: { "Set-Cookie": newCookie } });
-      }
-
-      let profile: User = {
-        email: refreshedUser.email ?? "unbekannt",
-      };
-
-      try {
-        const { data, error } = await refreshedSupabase
-          .from("benutzer")
-          .select("vorname, nachname, role")
-          .eq("user_id", refreshedUser.id)
-          .single();
-
-        if (!error && data) {
-          profile = { email: refreshedUser.email!, ...data };
-        }
-      } catch (err) {
-        console.warn("[root.loader] Fehler beim Laden des Profils:", err);
-      }
-
-      return json({ user: profile }, { headers: { "Set-Cookie": newCookie } });
+    if (refreshError || !sessionData.session) {
+      console.error("[root.loader] Refresh fehlgeschlagen:", refreshError?.message);
+      return json({ user: null });
     }
 
-    let profile: User = {
-      email: user.email ?? "unbekannt",
-    };
+    const newCookie = await setSupabaseSessionCookie(
+      request,
+      sessionData.session.refresh_token,
+      sessionData.session.access_token
+    );
 
-    try {
-      const { data, error } = await supabase
-        .from("benutzer")
-        .select("vorname, nachname, role")
-        .eq("user_id", user.id)
-        .single();
+    supabase = getSupabaseServerClient(
+      ctx,
+      sessionData.session.refresh_token,
+      sessionData.session.access_token
+    );
 
-      if (!error && data) {
-        profile = { email: user.email!, ...data };
-      }
-    } catch (err) {
-      console.warn("[root.loader] Fehler beim Laden des Profils:", err);
+    const { data: { user: refreshedUser }, error: refreshedError } = await supabase.auth.getUser();
+
+    if (refreshedError || !refreshedUser) {
+      console.error("[root.loader] getUser nach Refresh fehlgeschlagen:", refreshedError?.message);
+      return json({ user: null }, { headers: { "Set-Cookie": newCookie } });
     }
 
-    return json({ user: profile });
-  } catch (error) {
-    console.error("[root.loader] Unbehandelte Exception:", error);
-    return json({ user: null });
+    const { data: profile } = await supabase
+      .from("benutzer")
+      .select("vorname, nachname, role")
+      .eq("user_id", refreshedUser.id)
+      .single();
+
+    return json({ user: { email: refreshedUser.email, ...profile } }, {
+      headers: { "Set-Cookie": newCookie },
+    });
   }
+
+  const { data: profile } = await supabase
+    .from("benutzer")
+    .select("vorname, nachname, role")
+    .eq("user_id", user.id)
+    .single();
+
+  return json({ user: { email: user.email, ...profile } });
 }
+
+
 
 export function ErrorBoundary() {
   const error = useRouteError();
