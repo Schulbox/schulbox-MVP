@@ -7,7 +7,8 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/auth-helpers-remix";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
@@ -90,7 +91,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
   console.log("[loader] Fertiges Profil:", profile);
 
   return json({
-    user: profile,
+    
     ENV: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
@@ -140,15 +141,26 @@ export function ErrorBoundary() {
 
 // ✅ Finale App mit HTML-Wrapper, Header und Outlet
 export default function App() {
-  const { user, ENV } = useLoaderData<typeof loader>();
+  const { ENV } = useLoaderData<typeof loader>();
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.ENV = ENV;
+
+      // Supabase-Client erstellen und User holen
+      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+
+      supabase.auth.getUser().then(({ data, error }) => {
+        if (data?.user) {
+          setUser(data.user);
+          console.log("[App] Clientseitig eingeloggter User:", data.user);
+        } else {
+          console.warn("[App] Kein User aus getUser():", error);
+        }
+      });
     }
   }, [ENV]);
-
-  console.log("📦 [App] useLoaderData() gibt zurück:", user);
 
   return (
     <html lang="de">
@@ -169,4 +181,3 @@ export default function App() {
     </html>
   );
 }
-
