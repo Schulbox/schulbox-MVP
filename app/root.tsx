@@ -46,107 +46,90 @@ export async function loader(ctx: LoaderFunctionArgs) {
   console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token ? "vorhanden" : "nicht vorhanden");
 
   if (!refresh_token) {
-    console.log("[root.loader] Kein Token in der Session, User ist nicht eingeloggt");
     return json({
       user: null,
       ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+        SUPABASE_URL: process.env.SUPABASE_URL!,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
       },
     });
   }
 
+  // ⬇️ Initialer Client ohne Session
   const supabase = getSupabaseServerClient(ctx, refresh_token);
 
-  try {
-    // Session mit Token aktualisieren
-    const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({
-      refresh_token: refresh_token,
-    });
+  // ⬇️ Session aktualisieren
+  const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({ refresh_token });
 
-    if (sessionError) {
-      console.error("[root.loader] Fehler beim Session-Refresh:", sessionError.message);
-      return json({
-        user: null,
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-        },
-      });
-    }
-
-    if (sessionData.session) {
-      console.log("[root.loader] Session erfolgreich refreshed:", sessionData.user?.id);
-    
-      // Neue Session setzen, damit getUser funktioniert
-      console.log("[root.loader] Session refreshed, kein setSession nötig auf Server");
-
-    }
-    
-
-    // Benutzer explizit abrufen
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.error("[root.loader] Fehler bei auth.getUser():", userError.message);
-      return json({
-        user: null,
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-        },
-      });
-    }
-
-    console.log("[root.loader] Eingeloggter User:", user?.email);
-
-    let profile = null;
-
-    if (user?.id) {
-      try {
-        const { data, error } = await supabase
-          .from("benutzer")
-          .select("vorname, nachname, role")
-          .eq("user_id", user.id)
-          .single();
-
-        if (error) {
-          console.error("[loader] Fehler beim Laden des Profils:", error.message);
-        } else {
-          profile = {
-            email: user.email ?? "unbekannt",
-            ...data,
-          };
-        }
-      } catch (err) {
-        console.error("[loader] Exception beim Laden des Profils:", err);
-      }
-    } else {
-      console.warn("[loader] Kein user.id verfügbar!");
-    }
-
-    console.log("[loader] Fertiges Profil:", profile);
-    return json({
-      user: profile,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-      },
-    });
-  } catch (error) {
-    console.error("[loader] Unbehandelte Exception:", error);
+  if (sessionError || !sessionData.session) {
+    console.error("[root.loader] Fehler beim Session-Refresh:", sessionError?.message);
     return json({
       user: null,
       ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+        SUPABASE_URL: process.env.SUPABASE_URL!,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
       },
     });
   }
+
+  console.log("[root.loader] Session erfolgreich refreshed:", sessionData.user?.id);
+
+  // ⬇️ Neuer Client mit access_token über Cookie-Header
+  const supabaseWithSession = getSupabaseServerClient(
+    ctx,
+    refresh_token,
+    sessionData.session.access_token
+  );
+
+  // ⬇️ User laden
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseWithSession.auth.getUser();
+
+  if (userError || !user) {
+    console.error("[root.loader] Fehler bei auth.getUser():", userError?.message);
+    return json({
+      user: null,
+      ENV: {
+        SUPABASE_URL: process.env.SUPABASE_URL!,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
+      },
+    });
+  }
+
+  console.log("[root.loader] Eingeloggter User:", user.email);
+
+  // ⬇️ Profil laden
+  let profile = null;
+  try {
+    const { data, error } = await supabaseWithSession
+      .from("benutzer")
+      .select("vorname, nachname, role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error("[loader] Fehler beim Laden des Profils:", error.message);
+    } else {
+      profile = {
+        email: user.email ?? "unbekannt",
+        ...data,
+      };
+    }
+  } catch (err) {
+    console.error("[loader] Exception beim Laden des Profils:", err);
+  }
+
+  return json({
+    user: profile,
+    ENV: {
+      SUPABASE_URL: process.env.SUPABASE_URL!,
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
+    },
+  });
 }
+
 
 // ✅ Fehlerbehandlung für die gesamte App
 export function ErrorBoundary() {
