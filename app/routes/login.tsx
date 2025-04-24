@@ -25,8 +25,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     console.log("✅ Login erfolgreich:", { 
       email, 
       user_id: data.user?.id,
-      session_token_length: data.session.refresh_token.length
+      session_token_length: data.session.refresh_token?.length || 0
     });
+    
 
     // Nur refresh_token speichern (klein genug für Cookie)
     const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token);
