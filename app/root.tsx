@@ -77,6 +77,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
 
     if (sessionData.session) {
       console.log("[root.loader] Session erfolgreich refreshed:", sessionData.user?.id);
+      supabase.auth.setSession(sessionData.session); 
     }
 
     // Benutzer explizit abrufen
