@@ -15,6 +15,7 @@ import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 
+
 // 💡 Typ für das User-Profil
 export type User = {
   vorname?: string;
@@ -40,20 +41,37 @@ export const links: LinksFunction = () => [
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
 
-  // 👉 Token aus der Session holen
-  const { refresh_token } = await getSupabaseTokensFromSession(request);
-  console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token?.substring(0, 10));
+  // 🟢 1. Token aus Session holen
+  const { refresh_token }: { refresh_token: string | null } = await getSupabaseTokensFromSession(request);
 
-  // 👉 Supabase-Client mit Token erzeugen
-  const supabase = getSupabaseServerClient(ctx, refresh_token ?? undefined);
+  // 🔍 Token-Ausgabe (nur zur Debug-Zwecken)
+  if (typeof refresh_token === "string") {
+    console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token.substring(0, 10));
+  } else {
+    console.log("[root.loader] Kein gültiger refresh_token");
+  }
 
-  // 🔄 Statt getUser: getSession nutzen, um user zu bekommen
+  // 🟡 Supabase-Client initialisieren
+  const supabase = getSupabaseServerClient(
+    ctx,
+    typeof refresh_token === "string" ? refresh_token : undefined
+  );
+
+  // 🟢 2. Session setzen (nur wenn Token vorhanden)
+  if (typeof refresh_token === "string") {
+    await supabase.auth.setSession({
+      refresh_token,
+      access_token: "", // leer lassen
+    });
+  }
+
+  // 🟡 3. Session holen
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
-
   console.log("[loader] Eingeloggter User:", user);
 
-  let profile: User = null;
+  // 🟢 4. Benutzerprofil aus DB laden
+  let profile: any = null;
 
   if (user?.id) {
     const { data, error } = await supabase
@@ -75,7 +93,11 @@ export async function loader(ctx: LoaderFunctionArgs) {
   }
 
   console.log("[loader] Fertiges Profil:", profile);
-  return json({ user: profile });
+
+  // 🔁 Rückgabe für useLoaderData
+  return json({
+    user: profile,
+  });
 }
 
 
