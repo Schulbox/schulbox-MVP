@@ -7,6 +7,7 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
+import { useEffect } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
@@ -41,36 +42,30 @@ export const links: LinksFunction = () => [
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
 
-  // 🟢 1. Token aus Session holen
   const { refresh_token }: { refresh_token: string | null } = await getSupabaseTokensFromSession(request);
 
-  // 🔍 Token-Ausgabe (nur zur Debug-Zwecken)
   if (typeof refresh_token === "string") {
     console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token.substring(0, 10));
   } else {
     console.log("[root.loader] Kein gültiger refresh_token");
   }
 
-  // 🟡 Supabase-Client initialisieren
   const supabase = getSupabaseServerClient(
     ctx,
     typeof refresh_token === "string" ? refresh_token : undefined
   );
 
-  // 🟢 2. Session setzen (nur wenn Token vorhanden)
   if (typeof refresh_token === "string") {
     await supabase.auth.setSession({
       refresh_token,
-      access_token: "", // leer lassen
+      access_token: "",
     });
   }
 
-  // 🟡 3. Session holen
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
   console.log("[loader] Eingeloggter User:", user);
 
-  // 🟢 4. Benutzerprofil aus DB laden
   let profile: any = null;
 
   if (user?.id) {
@@ -94,11 +89,15 @@ export async function loader(ctx: LoaderFunctionArgs) {
 
   console.log("[loader] Fertiges Profil:", profile);
 
-  // 🔁 Rückgabe für useLoaderData
   return json({
     user: profile,
+    ENV: {
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    },
   });
 }
+
 
 
 // ✅ Fehlerbehandlung für die gesamte App
@@ -141,7 +140,13 @@ export function ErrorBoundary() {
 
 // ✅ Finale App mit HTML-Wrapper, Header und Outlet
 export default function App() {
-  const { user } = useLoaderData<typeof loader>();
+  const { user, ENV } = useLoaderData<typeof loader>();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.ENV = ENV;
+    }
+  }, [ENV]);
 
   console.log("📦 [App] useLoaderData() gibt zurück:", user);
 
@@ -164,3 +169,4 @@ export default function App() {
     </html>
   );
 }
+
