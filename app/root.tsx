@@ -7,10 +7,8 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/auth-helpers-remix";
-import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
 import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
@@ -54,8 +52,8 @@ export async function loader(ctx: LoaderFunctionArgs) {
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError) {
-      console.error("[root.loader] Fehler bei auth.getUser():", userError.message);
+    if (userError || !user) {
+      console.error("[root.loader] Fehler bei auth.getUser():", userError?.message);
 
       const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({
         refresh_token,
@@ -83,48 +81,48 @@ export async function loader(ctx: LoaderFunctionArgs) {
         error: refreshedError,
       } = await refreshedSupabase.auth.getUser();
 
-      if (refreshedError) {
-        console.error("[root.loader] Fehler nach Session-Refresh:", refreshedError.message);
-        return json({ user: null }, {
-          headers: { "Set-Cookie": newCookie },
-        });
+      if (refreshedError || !refreshedUser) {
+        console.error("[root.loader] Fehler nach Session-Refresh:", refreshedError?.message);
+        return json({ user: null }, { headers: { "Set-Cookie": newCookie } });
       }
 
-      let profile = null;
-      if (refreshedUser?.id) {
+      let profile: User = {
+        email: refreshedUser.email ?? "unbekannt",
+      };
+
+      try {
         const { data, error } = await refreshedSupabase
           .from("benutzer")
           .select("vorname, nachname, role")
           .eq("user_id", refreshedUser.id)
           .single();
 
-        if (!error) {
-          profile = {
-            email: refreshedUser.email ?? "unbekannt",
-            ...data,
-          };
+        if (!error && data) {
+          profile = { email: refreshedUser.email!, ...data };
         }
+      } catch (err) {
+        console.warn("[root.loader] Fehler beim Laden des Profils:", err);
       }
 
-      return json({ user: profile }, {
-        headers: { "Set-Cookie": newCookie },
-      });
+      return json({ user: profile }, { headers: { "Set-Cookie": newCookie } });
     }
 
-    let profile = null;
-    if (user?.id) {
+    let profile: User = {
+      email: user.email ?? "unbekannt",
+    };
+
+    try {
       const { data, error } = await supabase
         .from("benutzer")
         .select("vorname, nachname, role")
         .eq("user_id", user.id)
         .single();
 
-      if (!error) {
-        profile = {
-          email: user.email ?? "unbekannt",
-          ...data,
-        };
+      if (!error && data) {
+        profile = { email: user.email!, ...data };
       }
+    } catch (err) {
+      console.warn("[root.loader] Fehler beim Laden des Profils:", err);
     }
 
     return json({ user: profile });

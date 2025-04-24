@@ -16,30 +16,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       password,
     });
 
-    if (error || !data.session || !data.session.refresh_token) {
-      console.error("[login.action] Login fehlgeschlagen:", error?.message);
+    if (error || !data.session) {
       return json({ error: error?.message || "Login fehlgeschlagen." });
     }
 
-    console.log("✅ Login erfolgreich:", {
-      email,
-      user_id: data.user?.id,
-      session_token_length: data.session.refresh_token.length,
-    });
+    const access_token = data.session.access_token;
+    const refresh_token = data.session.refresh_token;
 
-    // Supabase-Session-Cookie setzen
-    const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token, data.session.access_token);
+    console.log("✅ Login erfolgreich:", { email, user_id: data.user.id });
+
+    // 👉 Setze Tokens direkt als Cookies – **ohne Remix-Session!**
+    const headers = new Headers();
+    headers.append("Set-Cookie", `sb-access-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax`);
+    headers.append("Set-Cookie", `sb-refresh-token=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax`);
 
     return redirect("/", {
-      headers: {
-        "Set-Cookie": cookie,
-      },
+      headers,
     });
   } catch (err) {
-    console.error("[login.action] Unerwarteter Fehler:", err);
-    return json({
-      error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
-    });
+    console.error("[login.action] Fehler:", err);
+    return json({ error: "Ein unerwarteter Fehler ist aufgetreten." });
   }
 };
 
