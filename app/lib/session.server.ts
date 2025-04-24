@@ -13,7 +13,8 @@ const sessionStorage = createCookieSessionStorage({
   },
 });
 
-const { getSession, commitSession, destroySession } = sessionStorage;
+export const { getSession, commitSession, destroySession } = sessionStorage;
+
 
 // ✅ Tokens aus der Session extrahieren
 export async function getSupabaseTokensFromSession(request: Request) {
