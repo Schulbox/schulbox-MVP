@@ -10,8 +10,9 @@ export function getSupabaseServerClient(
   const supabaseUrl = process.env.SUPABASE_URL!;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 
-  // 👉 Header klonen und manuell Tokens setzen
+  // 🧠 Letzter Versuch, korrekt mit Header-Manipulation statt nicht unterstütztem cookie-Override
   const headers = new Headers(ctx.request.headers);
+
   if (refresh_token) {
     headers.append("cookie", `sb-refresh-token=${refresh_token}`);
   }
@@ -19,15 +20,11 @@ export function getSupabaseServerClient(
     headers.append("cookie", `sb-access-token=${access_token}`);
   }
 
-  const requestWithTokens = new Request(ctx.request.url, {
-    method: ctx.request.method,
-    headers,
-    body: ctx.request.body,
-    redirect: ctx.request.redirect,
-  });
-
   return createServerClient(supabaseUrl, supabaseAnonKey, {
-    request: requestWithTokens,
+    request: new Request(ctx.request.url, {
+      method: ctx.request.method,
+      headers,
+    }),
     response: new Response(),
   });
 }
