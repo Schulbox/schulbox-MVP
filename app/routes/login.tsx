@@ -28,7 +28,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
 
     // Supabase-Session-Cookie setzen
-    const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token);
+    const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token, data.session.access_token);
 
     return redirect("/", {
       headers: {

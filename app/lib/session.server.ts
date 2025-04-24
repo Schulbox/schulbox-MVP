@@ -15,23 +15,34 @@ const sessionStorage = createCookieSessionStorage({
 
 export const { getSession, commitSession, destroySession } = sessionStorage;
 
-
 // ✅ Tokens aus der Session extrahieren
 export async function getSupabaseTokensFromSession(request: Request) {
   const session = await getSession(request.headers.get("Cookie"));
   const refresh_token = session.get("supabaseRefreshToken") as string | null;
-  return { refresh_token };
+  const access_token = session.get("supabaseAccessToken") as string | null;
+
+  console.log("[getSupabaseTokensFromSession] Token gefunden:",
+    refresh_token ? "refresh_token vorhanden" : "kein refresh_token",
+    access_token ? "access_token vorhanden" : "kein access_token"
+  );
+
+  return { refresh_token, access_token };
 }
 
-// ✅ Token in Session speichern
+// ✅ Tokens in Session speichern
 export async function setSupabaseSessionCookie(
   request: Request,
-  refresh_token: string
+  refresh_token: string,
+  access_token: string
 ) {
   const session = await getSession(request.headers.get("Cookie"));
   session.set("supabaseRefreshToken", refresh_token);
+  session.set("supabaseAccessToken", access_token);
 
-  console.log("[setSupabaseSessionCookie] Token gespeichert:", refresh_token.substring(0, 10) + "...");
+  console.log("[setSupabaseSessionCookie] Tokens gespeichert:",
+    refresh_token.substring(0, 10) + "...",
+    access_token.substring(0, 10) + "..."
+  );
 
   return await commitSession(session, {
     path: "/",

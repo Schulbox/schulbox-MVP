@@ -1,3 +1,4 @@
+// app/root.tsx
 import {
   Links,
   Outlet,
@@ -10,14 +11,12 @@ import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/auth-helpers-remix";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getSupabaseTokensFromSession } from "~/lib/session.server";
+import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
 import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 
-
-// 💡 Typ für das User-Profil
 export type User = {
   vorname?: string;
   nachname?: string;
@@ -38,100 +37,103 @@ export const links: LinksFunction = () => [
   },
 ];
 
-// ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
-  const { refresh_token } = await getSupabaseTokensFromSession(request);
+  const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
 
-  console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token ? "vorhanden" : "nicht vorhanden");
-
-  if (!refresh_token) {
-    return json({
-      user: null,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL!,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-      },
-    });
+  if (!refresh_token || !access_token) {
+    console.log("[root.loader] Tokens nicht vollständig, User ist nicht eingeloggt");
+    return json({ user: null });
   }
 
-  // ⬇️ Initialer Client ohne Session
-  const supabase = getSupabaseServerClient(ctx, refresh_token);
+  const supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
 
-  // ⬇️ Session aktualisieren
-  const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({ refresh_token });
-
-  if (sessionError || !sessionData.session) {
-    console.error("[root.loader] Fehler beim Session-Refresh:", sessionError?.message);
-    return json({
-      user: null,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL!,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-      },
-    });
-  }
-
-  console.log("[root.loader] Session erfolgreich refreshed:", sessionData.user?.id);
-
-  // ⬇️ Neuer Client mit access_token über Cookie-Header
-  const supabaseWithSession = getSupabaseServerClient(
-    ctx,
-    refresh_token,
-    sessionData.session.access_token
-  );
-
-  // ⬇️ User laden
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseWithSession.auth.getUser();
-
-  if (userError || !user) {
-    console.error("[root.loader] Fehler bei auth.getUser():", userError?.message);
-    return json({
-      user: null,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL!,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-      },
-    });
-  }
-
-  console.log("[root.loader] Eingeloggter User:", user.email);
-
-  // ⬇️ Profil laden
-  let profile = null;
   try {
-    const { data, error } = await supabaseWithSession
-      .from("benutzer")
-      .select("vorname, nachname, role")
-      .eq("user_id", user.id)
-      .single();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error("[loader] Fehler beim Laden des Profils:", error.message);
-    } else {
-      profile = {
-        email: user.email ?? "unbekannt",
-        ...data,
-      };
+    if (userError) {
+      console.error("[root.loader] Fehler bei auth.getUser():", userError.message);
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({
+        refresh_token,
+      });
+
+      if (sessionError || !sessionData.session) {
+        console.error("[root.loader] Session-Refresh fehlgeschlagen:", sessionError?.message);
+        return json({ user: null });
+      }
+
+      const newCookie = await setSupabaseSessionCookie(
+        request,
+        sessionData.session.refresh_token,
+        sessionData.session.access_token
+      );
+
+      const refreshedSupabase = getSupabaseServerClient(
+        ctx,
+        sessionData.session.refresh_token,
+        sessionData.session.access_token
+      );
+
+      const {
+        data: { user: refreshedUser },
+        error: refreshedError,
+      } = await refreshedSupabase.auth.getUser();
+
+      if (refreshedError) {
+        console.error("[root.loader] Fehler nach Session-Refresh:", refreshedError.message);
+        return json({ user: null }, {
+          headers: { "Set-Cookie": newCookie },
+        });
+      }
+
+      let profile = null;
+      if (refreshedUser?.id) {
+        const { data, error } = await refreshedSupabase
+          .from("benutzer")
+          .select("vorname, nachname, role")
+          .eq("user_id", refreshedUser.id)
+          .single();
+
+        if (!error) {
+          profile = {
+            email: refreshedUser.email ?? "unbekannt",
+            ...data,
+          };
+        }
+      }
+
+      return json({ user: profile }, {
+        headers: { "Set-Cookie": newCookie },
+      });
     }
-  } catch (err) {
-    console.error("[loader] Exception beim Laden des Profils:", err);
-  }
 
-  return json({
-    user: profile,
-    ENV: {
-      SUPABASE_URL: process.env.SUPABASE_URL!,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-    },
-  });
+    let profile = null;
+    if (user?.id) {
+      const { data, error } = await supabase
+        .from("benutzer")
+        .select("vorname, nachname, role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!error) {
+        profile = {
+          email: user.email ?? "unbekannt",
+          ...data,
+        };
+      }
+    }
+
+    return json({ user: profile });
+  } catch (error) {
+    console.error("[root.loader] Unbehandelte Exception:", error);
+    return json({ user: null });
+  }
 }
 
-
-// ✅ Fehlerbehandlung für die gesamte App
 export function ErrorBoundary() {
   const error = useRouteError();
   console.error("[ErrorBoundary] App-Fehler:", error);
@@ -169,39 +171,12 @@ export function ErrorBoundary() {
   );
 }
 
-// ✅ Finale App mit HTML-Wrapper, Header und Outlet
 type LoaderData = {
   user: User;
-  ENV: {
-    SUPABASE_URL: string;
-    SUPABASE_ANON_KEY: string;
-  };
 };
 
 export default function App() {
-  const { ENV } = useLoaderData<LoaderData>();
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.ENV = ENV;
-
-      // Supabase-Client erstellen und User holen
-      const supabase = createBrowserClient(
-        ENV.SUPABASE_URL!,
-        ENV.SUPABASE_ANON_KEY!
-      );
-
-      supabase.auth.getUser().then(({ data, error }) => {
-        if (data?.user) {
-          setUser(data.user);
-          console.log("[App] Clientseitig eingeloggter User:", data.user);
-        } else {
-          console.warn("[App] Kein User aus getUser():", error);
-        }
-      });
-    }
-  }, [ENV]);
+  const { user } = useLoaderData<LoaderData>();
 
   return (
     <html lang="de">
