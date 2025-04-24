@@ -79,10 +79,8 @@ export async function loader(ctx: LoaderFunctionArgs) {
       console.log("[root.loader] Session erfolgreich refreshed:", sessionData.user?.id);
     
       // Neue Session setzen, damit getUser funktioniert
-      await supabase.auth.setSession({
-        access_token: sessionData.session.access_token,
-        refresh_token: sessionData.session.refresh_token,
-      });
+      console.log("[root.loader] Session refreshed, kein setSession nötig auf Server");
+
     }
     
 
