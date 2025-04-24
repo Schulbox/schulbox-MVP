@@ -40,9 +40,11 @@ export const links: LinksFunction = () => [
 ];
 
 // ✅ Loader lädt user-Daten
+// ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
 
+  // 🟢 1. Token aus Session holen
   const { refresh_token }: { refresh_token: string | null } = await getSupabaseTokensFromSession(request);
 
   if (typeof refresh_token === "string") {
@@ -51,22 +53,26 @@ export async function loader(ctx: LoaderFunctionArgs) {
     console.log("[root.loader] Kein gültiger refresh_token");
   }
 
-  const supabase = getSupabaseServerClient(
-    ctx,
-    typeof refresh_token === "string" ? refresh_token : undefined
-  );
+  // 🟡 Supabase-Client initialisieren
+  const supabase = getSupabaseServerClient(ctx, refresh_token || undefined);
 
+  // 🟢 2. Session per refresh holen (NEU!)
   if (typeof refresh_token === "string") {
-    await supabase.auth.setSession({
-      refresh_token,
-      access_token: "",
-    });
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+    if (error) {
+      console.error("[loader] Fehler beim Refresh:", error.message);
+    } else {
+      console.log("[loader] Session erfolgreich refreshed:", data.session?.user?.id);
+    }
   }
 
+  // 🟡 3. Session holen
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
   console.log("[loader] Eingeloggter User:", user);
 
+  // 🟢 4. Benutzerprofil aus DB laden
   let profile: any = null;
 
   if (user?.id) {
@@ -91,13 +97,14 @@ export async function loader(ctx: LoaderFunctionArgs) {
   console.log("[loader] Fertiges Profil:", profile);
 
   return json({
-    
+    user: profile,
     ENV: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
     },
   });
 }
+
 
 
 
