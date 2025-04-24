@@ -16,20 +16,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       password,
     });
 
-    if (error || !data.session) {
+    if (error || !data.session || !data.session.refresh_token) {
       console.error("[login.action] Login fehlgeschlagen:", error?.message);
       return json({ error: error?.message || "Login fehlgeschlagen." });
     }
 
-    // Debug-Log für Vercel Logs
-    console.log("✅ Login erfolgreich:", { 
-      email, 
+    console.log("✅ Login erfolgreich:", {
+      email,
       user_id: data.user?.id,
-      session_token_length: data.session.refresh_token?.length || 0
+      session_token_length: data.session.refresh_token.length,
     });
-    
 
-    // Nur refresh_token speichern (klein genug für Cookie)
+    // Supabase-Session-Cookie setzen
     const cookie = await setSupabaseSessionCookie(request, data.session.refresh_token);
 
     return redirect("/", {
@@ -39,11 +37,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   } catch (err) {
     console.error("[login.action] Unerwarteter Fehler:", err);
-    return json({ 
-      error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut." 
+    return json({
+      error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
     });
   }
 };
+
 
 export default function Login() {
   const navigation = useNavigation();
