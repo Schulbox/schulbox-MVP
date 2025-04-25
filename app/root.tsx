@@ -8,18 +8,18 @@ import {
   useRevalidator,
   useRouteError,
 } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
+import {
+  getSupabaseTokensFromSession,
+  setSupabaseSessionCookie,
+} from "~/lib/session.server";
 import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
-import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
-
-
-
+import { createBrowserClient } from "@supabase/auth-helpers-remix";
 
 export type User = {
   vorname?: string;
@@ -66,8 +66,8 @@ export async function loader(ctx: LoaderFunctionArgs) {
   try {
     const { data, error } = await supabase.auth.refreshSession({ refresh_token });
 
-    if (error) {
-      console.error("[root.loader] Fehler beim Session-Refresh:", error.message);
+    if (error || !data.session) {
+      console.error("[root.loader] Fehler beim Session-Refresh:", error?.message);
       return json({
         user: null,
         ENV: {
@@ -76,19 +76,6 @@ export async function loader(ctx: LoaderFunctionArgs) {
         }
       });
     }
-
-    if (!data.session || !data.user) {
-      console.error("[root.loader] Session-Refresh erfolgreich, aber keine Benutzerdaten");
-      return json({
-        user: null,
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-        }
-      });
-    }
-
-    console.log("[root.loader] Session erfolgreich refreshed:", data.user.id);
 
     const newCookie = await setSupabaseSessionCookie(
       request,
@@ -102,37 +89,38 @@ export async function loader(ctx: LoaderFunctionArgs) {
       data.session.access_token
     );
 
-    console.log("[root.loader] Supabase-User-ID:", data.user.id);
+    // 🎯 Hole vollständige User-Infos
+    const { data: userResult, error: userError } = await refreshedSupabase.auth.getUser();
+    const userId = userResult?.user?.id;
 
-    const { data: alleBenutzer, error: alleBenutzerError } = await refreshedSupabase
-      .from("benutzer")
-      .select("*");
-    
-    console.log("[root.loader] Alle Benutzer:", alleBenutzer);
-    console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
-    
+    if (!userId) {
+      console.error("[root.loader] Supabase-User-ID aus getUser(): undefined", userError);
+      return json({
+        user: null,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        }
+      });
+    }
 
-    const { data: userData } = await refreshedSupabase.auth.getUser();
-    const userId = userData?.user?.id;
-    
-    console.log("[root.loader] Supabase-User-ID aus getUser():", userId);
-    
+    console.log("[root.loader] Supabase-User-ID:", userId);
+
     const { data: benutzerProfil, error: profilError } = await refreshedSupabase
       .from("benutzer")
       .select("vorname, nachname, role")
       .eq("user_id", userId)
       .single();
-    
+
     if (profilError) {
       console.error("[root.loader] Fehler beim Laden des Profils:", profilError.message);
     }
-    
 
     if (!benutzerProfil) {
       console.log("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
       return json({
         user: {
-          email: data.user.email || "unbekannt",
+          email: userResult?.user?.email || "unbekannt",
           role: "lehrkraft"
         },
         ENV: {
@@ -143,10 +131,22 @@ export async function loader(ctx: LoaderFunctionArgs) {
         headers: { "Set-Cookie": newCookie }
       });
     }
-
+    if (!userResult.user) {
+      console.error("[root.loader] Kein gültiger Benutzer in userResult:", userResult);
+      return json({
+        user: null,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        }
+      }, {
+        headers: { "Set-Cookie": newCookie }
+      });
+    }
+    
     return json({
       user: {
-        email: data.user.email,
+        email: userResult.user.email,
         role: benutzerProfil.role,
         vorname: benutzerProfil.vorname,
         nachname: benutzerProfil.nachname,
@@ -220,7 +220,7 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((event) => {
       console.log("[App] Auth geändert:", event);
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        revalidator.revalidate(); // Kein F5, sondern nur Serverdaten neu laden
+        revalidator.revalidate();
       }
     });
 
@@ -246,4 +246,3 @@ export default function App() {
     </html>
   );
 }
-
