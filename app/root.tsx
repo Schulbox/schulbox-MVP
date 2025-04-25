@@ -5,6 +5,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRevalidator,
   useRouteError,
 } from "@remix-run/react";
 import { useState, useEffect } from "react";
@@ -16,6 +17,7 @@ import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
+
 
 
 
@@ -188,27 +190,22 @@ export function ErrorBoundary() {
 
 export default function App() {
   const { ENV, user } = useLoaderData<typeof loader>();
-  const [clientUser, setClientUser] = useState<User>(() => user); // initial aus loader
+  const revalidator = useRevalidator();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-  
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log("[App] Auth geändert:", event);
-      
-        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          window.location.reload();
-        }
-      });
-  
-      return () => subscription.unsubscribe();
-    }
+    const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      console.log("[App] Auth geändert:", event);
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        revalidator.revalidate(); // Kein F5, sondern nur Serverdaten neu laden
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [ENV]);
-  
-  
 
   return (
     <html lang="de">
@@ -219,7 +216,7 @@ export default function App() {
         <Links />
       </head>
       <body className="bg-white text-gray-900 font-sans">
-        <Header user={clientUser} />
+        <Header user={user} />
         <main>
           <Outlet />
         </main>
@@ -229,6 +226,4 @@ export default function App() {
     </html>
   );
 }
-
-
 
