@@ -1,7 +1,8 @@
 // app/routes/login.tsx
-import { Form, useActionData, useNavigation, Link } from "@remix-run/react";
+import { Form, useActionData, useNavigation, Link, useSearchParams } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
+import { useEffect } from "react";
 import { supabase } from "~/lib/supabaseClient";
 import { setSupabaseSessionCookie } from "~/lib/session.server";
 
@@ -21,21 +22,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: error?.message || "Login fehlgeschlagen." });
     }
 
-    // Debug-Log für Vercel Logs
     console.log("✅ Login erfolgreich:", { 
       email, 
       user_id: data.user?.id,
       session_token_length: data.session.refresh_token?.length || 0
     });
     
-    // Beide Tokens speichern (refresh_token und access_token)
     const cookie = await setSupabaseSessionCookie(
       request, 
       data.session.refresh_token,
       data.session.access_token
     );
 
-    return redirect("/", {
+    // 👉 hier: Redirect mit URL-Parameter
+    return redirect("/?refreshed=1", {
       headers: {
         "Set-Cookie": cookie,
       },
@@ -51,6 +51,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Login() {
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // 👉 hier: Wenn "?refreshed=1" vorhanden ist, Seite neu laden
+    if (searchParams.get("refreshed") === "1") {
+      window.location.href = "/";
+    }
+  }, [searchParams]);
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen pt-20 p-4">
