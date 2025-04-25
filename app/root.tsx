@@ -17,6 +17,8 @@ import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
 import { useRevalidator } from "@remix-run/react";
+import FallbackHeader from "~/components/FallbackHeader";
+
 
 const { ENV, user: clientUser } = useLoaderData<typeof loader>();
 const revalidator = useRevalidator();
@@ -164,7 +166,7 @@ export function ErrorBoundary() {
         <Links />
       </head>
       <body className="bg-white text-gray-900 font-sans">
-        <Header user={null} />
+      <FallbackHeader />
         <main className="p-6 max-w-4xl mx-auto">
           <AuthErrorBoundary error={error instanceof Error ? error : undefined}>
             <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
