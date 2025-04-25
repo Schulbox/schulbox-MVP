@@ -16,7 +16,10 @@ import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
+import { useRevalidator } from "@remix-run/react";
 
+const { ENV, user: clientUser } = useLoaderData<typeof loader>();
+const revalidator = useRevalidator();
 
 export type User = {
   vorname?: string;
@@ -190,21 +193,17 @@ export default function App() {
   const [clientUser, setClientUser] = useState<User>(() => user); // initial aus loader
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+    const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
   
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log("[App] Auth geändert:", event);
-      
-        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          window.location.reload();
-        }
-      });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        revalidator.revalidate(); // sauberer Reload
+      }
+    });
   
-      return () => subscription.unsubscribe();
-    }
+    return () => subscription.unsubscribe();
   }, [ENV]);
   
   
