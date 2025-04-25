@@ -112,11 +112,21 @@ export async function loader(ctx: LoaderFunctionArgs) {
     console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
     
 
-    const { data: benutzerProfil } = await refreshedSupabase
+    const { data: userData } = await refreshedSupabase.auth.getUser();
+    const userId = userData?.user?.id;
+    
+    console.log("[root.loader] Supabase-User-ID aus getUser():", userId);
+    
+    const { data: benutzerProfil, error: profilError } = await refreshedSupabase
       .from("benutzer")
       .select("vorname, nachname, role")
-      .eq("user_id", data.user.id)
+      .eq("user_id", userId)
       .single();
+    
+    if (profilError) {
+      console.error("[root.loader] Fehler beim Laden des Profils:", profilError.message);
+    }
+    
 
     if (!benutzerProfil) {
       console.log("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
