@@ -112,16 +112,12 @@ export async function loader(ctx: LoaderFunctionArgs) {
     console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
     
 
-    const { data: userData } = await refreshedSupabase.auth.getUser();
-    const userId = userData?.user?.id;
-    
-    console.log("[root.loader] Supabase-User-ID aus getUser():", userId);
-    
     const { data: benutzerProfil, error: profilError } = await refreshedSupabase
-      .from("benutzer")
-      .select("vorname, nachname, role")
-      .eq("user_id", userId)
-      .single();
+    .from("benutzer")
+    .select("vorname, nachname, role")
+    .eq("user_id", data.user.id)
+    .single();
+  
     
     if (profilError) {
       console.error("[root.loader] Fehler beim Laden des Profils:", profilError.message);
