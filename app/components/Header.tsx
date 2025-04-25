@@ -69,13 +69,37 @@ export default function Header({ user }: { user: User }) {
                         {`Hallo, ${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()} ⌄
 
               </button>
-              {userMenuOpen && (
-                <div className="absolute right-0 mt-2 bg-white border rounded shadow-lg py-2 w-48 z-50">
-                  <Link to="/profil" className="block px-4 py-2 hover:bg-gray-100 text-sm">Profil bearbeiten</Link>
-                  <Link to="/logout" className="block px-4 py-2 hover:bg-gray-100 text-sm">Ausloggen</Link>
-                  <Link to="/cart" className="block px-4 py-2 hover:bg-gray-100 text-sm">🛒 Einkaufswagen</Link>
-                </div>
-              )}
+              <Transition
+  show={userMenuOpen}
+  enter="transition ease-out duration-200"
+  enterFrom="opacity-0 translate-y-1"
+  enterTo="opacity-100 translate-y-0"
+  leave="transition ease-in duration-150"
+  leaveFrom="opacity-100 translate-y-0"
+  leaveTo="opacity-0 translate-y-1"
+>
+  <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white/80 backdrop-blur-md ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
+    <Link
+      to="/profil"
+      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+    >
+      📝 Profil bearbeiten
+    </Link>
+    <Link
+      to="/logout"
+      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+    >
+      🚪 Ausloggen
+    </Link>
+    <Link
+      to="/cart"
+      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+    >
+      🛒 Einkaufswagen
+    </Link>
+  </div>
+</Transition>
+
             </div>
           ) : (
             <div className="hidden md:block">
