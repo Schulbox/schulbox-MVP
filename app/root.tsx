@@ -247,21 +247,23 @@ export default function App() {
   
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          if (!clientUser?.vorname && !clientUser?.nachname) {
-            setClientUser((prev: User | null) => ({
-              ...prev,
-              email: data.user.email,
-              role: prev?.role ?? undefined,
-              vorname: prev?.vorname ?? undefined,
-              nachname: prev?.nachname ?? undefined
-            }));
+          if (data?.user) {
+            setClientUser((prev: User | null) => {
+              if (prev?.vorname || prev?.nachname) return prev;
+          
+              return {
+                email: data.user.email,
+                role: prev && prev.role,
+                vorname: prev && prev.vorname,
+                nachname: prev && prev.nachname,
+              };
+            });
+          } else {
+            console.log("[App] Kein User mehr → setze clientUser auf null");
+            setClientUser(null);
           }
-          console.log("[App] Clientseitig eingeloggter User:", data.user);
-        } else {
-          // User ist abgemeldet – auch clientseitig
-          console.log("[App] Kein User mehr – setze clientUser auf null");
-          setClientUser(null);
         }
+        
       });
     }
   }, [ENV]);

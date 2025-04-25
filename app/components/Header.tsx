@@ -60,15 +60,15 @@ export default function Header({ user }: { user: User }) {
 
         {/* Icons + Login */}
         <div className="flex items-center gap-4 text-gray-600 relative">
-          {user ? (
-            <div className="relative hidden md:block">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="text-sm font-medium hover:text-blue-600"
-              >
-                        {`Hallo, ${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()} ⌄
+        {user ? (
+  <div className="relative hidden md:block">
+    <button
+      onClick={() => setUserMenuOpen(!userMenuOpen)}
+      className="text-sm font-medium hover:text-blue-600"
+    >
+      {`Hallo, ${user.vorname ?? user.email}`.trim()} ⌄
+    </button>
 
-              </button>
               <Transition
   show={userMenuOpen}
   enter="transition ease-out duration-200"
@@ -147,7 +147,7 @@ export default function Header({ user }: { user: User }) {
             <hr />
             {user ? (
               <>
-                <p className="text-sm font-medium text-gray-600">Hallo, {user.vorname} {user.nachname}</p>
+                <p className="text-sm font-medium text-gray-600"> {`Hallo, ${user?.vorname ?? user?.email ?? ""} ${user?.nachname ?? ""}`.trim()}</p>
                 <Link to="/profil" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Profil bearbeiten</Link>
                 <Link to="/logout" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Ausloggen</Link>
               </>
