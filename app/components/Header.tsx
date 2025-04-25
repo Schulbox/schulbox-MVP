@@ -66,10 +66,8 @@ export default function Header({ user }: { user: User }) {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="text-sm font-medium hover:text-blue-600"
               >
-                        Eingeloggt als{" "}
-                        {user.vorname || user.nachname
-                          ? `${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()
-                          : user.email} ⌄
+                        {`Hallo, ${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()} ⌄
+
               </button>
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 bg-white border rounded shadow-lg py-2 w-48 z-50">
@@ -125,7 +123,7 @@ export default function Header({ user }: { user: User }) {
             <hr />
             {user ? (
               <>
-                <p className="text-sm font-medium text-gray-600">Eingeloggt als {user.vorname} {user.nachname}</p>
+                <p className="text-sm font-medium text-gray-600">Hallo, {user.vorname} {user.nachname}</p>
                 <Link to="/profil" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Profil bearbeiten</Link>
                 <Link to="/logout" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Ausloggen</Link>
               </>
