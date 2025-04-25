@@ -242,28 +242,30 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.ENV = ENV;
+  
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
   
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          setClientUser((prev: User | null) => {
-            // Wenn Vorname oder Nachname bereits vorhanden, nichts überschreiben
-            if (prev?.vorname || prev?.nachname) return prev;
-  
-            return {
+          if (!clientUser?.vorname && !clientUser?.nachname) {
+            setClientUser((prev: User | null) => ({
+              ...prev,
               email: data.user.email,
-              role: undefined,
-              vorname: undefined,
-              nachname: undefined,
-            };
-          });
+              role: prev?.role ?? undefined,
+              vorname: prev?.vorname ?? undefined,
+              nachname: prev?.nachname ?? undefined
+            }));
+          }
           console.log("[App] Clientseitig eingeloggter User:", data.user);
         } else {
-          console.warn("[App] Kein User aus getUser():", error);
+          // User ist abgemeldet – auch clientseitig
+          console.log("[App] Kein User mehr – setze clientUser auf null");
+          setClientUser(null);
         }
       });
     }
   }, [ENV]);
+  
   
 
   return (
