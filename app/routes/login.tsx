@@ -17,28 +17,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
 
     if (error || !data.session) {
+      console.error("[login.action] Login fehlgeschlagen:", error?.message);
       return json({ error: error?.message || "Login fehlgeschlagen." });
     }
 
-    const access_token = data.session.access_token;
-    const refresh_token = data.session.refresh_token;
-
-    console.log("✅ Login erfolgreich:", { email, user_id: data.user.id });
-
-    // 👉 Setze Tokens direkt als Cookies – **ohne Remix-Session!**
-    const headers = new Headers();
-    headers.append("Set-Cookie", `sb-access-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax`);
-    headers.append("Set-Cookie", `sb-refresh-token=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax`);
+    // Debug-Log für Vercel Logs
+    console.log("✅ Login erfolgreich:", { 
+      email, 
+      user_id: data.user?.id,
+      session_token_length: data.session.refresh_token?.length || 0
+    });
+    
+    // Beide Tokens speichern (refresh_token und access_token)
+    const cookie = await setSupabaseSessionCookie(
+      request, 
+      data.session.refresh_token,
+      data.session.access_token
+    );
 
     return redirect("/", {
-      headers,
+      headers: {
+        "Set-Cookie": cookie,
+      },
     });
   } catch (err) {
-    console.error("[login.action] Fehler:", err);
-    return json({ error: "Ein unerwarteter Fehler ist aufgetreten." });
+    console.error("[login.action] Unerwarteter Fehler:", err);
+    return json({ 
+      error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut." 
+    });
   }
 };
-
 
 export default function Login() {
   const navigation = useNavigation();

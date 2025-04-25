@@ -7,20 +7,51 @@ export function getSupabaseServerClient(
   refresh_token?: string,
   access_token?: string
 ) {
-  const supabaseUrl = process.env.SUPABASE_URL!;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-
-  const headers = new Headers(ctx.request.headers);
-
-  // Fake die Tokens über den Cookie-Header
-  const existing = headers.get("cookie") ?? "";
-  const cookies: string[] = [];
-  if (refresh_token) cookies.push(`sb-refresh-token=${refresh_token}`);
-  if (access_token) cookies.push(`sb-access-token=${access_token}`);
-  headers.set("cookie", [existing, ...cookies].filter(Boolean).join("; "));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    request: new Request(ctx.request.url, { headers }),
-    response: new Response(),
+  console.log("ENV SUPABASE_URL:", process.env.SUPABASE_URL);
+  console.log("ENV SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY);
+  
+  // Erstelle eine neue Request mit modifizierten Cookies
+  const originalRequest = ctx.request;
+  const url = new URL(originalRequest.url);
+  
+  // Erstelle eine neue Request mit den gleichen Eigenschaften
+  const newHeaders = new Headers(originalRequest.headers);
+  
+  // Füge die Tokens als Cookies hinzu, wenn sie vorhanden sind
+  if (refresh_token || access_token) {
+    const cookieHeader = newHeaders.get("Cookie") || "";
+    let cookies = cookieHeader.split('; ').filter(c => 
+      !c.startsWith('sb-refresh-token=') && !c.startsWith('sb-access-token=')
+    );
+    
+    if (refresh_token) {
+      cookies.push(`sb-refresh-token=${refresh_token}`);
+      console.log("[supabase.server] Verwende refresh_token für Request");
+    }
+    
+    if (access_token) {
+      cookies.push(`sb-access-token=${access_token}`);
+      console.log("[supabase.server] Verwende access_token für Request");
+    }
+    
+    newHeaders.set("Cookie", cookies.join('; '));
+  }
+  
+  const newRequest = new Request(url.toString(), {
+    method: originalRequest.method,
+    headers: newHeaders,
+    body: originalRequest.body,
+    redirect: originalRequest.redirect,
+    integrity: originalRequest.integrity,
+    signal: originalRequest.signal,
   });
+
+  return createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    {
+      request: newRequest,
+      response: new Response(),
+    }
+  );
 }

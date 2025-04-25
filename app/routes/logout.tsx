@@ -12,6 +12,11 @@ export async function action({ request }: ActionFunctionArgs) {
     
     // Session-Cookie löschen
     const session = await getSession(request.headers.get("Cookie"));
+    
+    // Beide Tokens aus der Session entfernen
+    session.unset("supabaseRefreshToken");
+    session.unset("supabaseAccessToken");
+    
     const cookie = await destroySession(session);
     
     console.log("[logout.action] Benutzer erfolgreich ausgeloggt");
