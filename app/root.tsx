@@ -16,12 +16,8 @@ import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
-import { useRevalidator } from "@remix-run/react";
-import FallbackHeader from "~/components/FallbackHeader";
 
 
-const { ENV, user: clientUser } = useLoaderData<typeof loader>();
-const revalidator = useRevalidator();
 
 export type User = {
   vorname?: string;
@@ -166,7 +162,7 @@ export function ErrorBoundary() {
         <Links />
       </head>
       <body className="bg-white text-gray-900 font-sans">
-      <FallbackHeader />
+        <Header user={null} />
         <main className="p-6 max-w-4xl mx-auto">
           <AuthErrorBoundary error={error instanceof Error ? error : undefined}>
             <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
@@ -195,17 +191,21 @@ export default function App() {
   const [clientUser, setClientUser] = useState<User>(() => user); // initial aus loader
 
   useEffect(() => {
-    const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+    if (typeof window !== "undefined") {
+      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
   
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        revalidator.revalidate(); // sauberer Reload
-      }
-    });
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log("[App] Auth geändert:", event);
+      
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+          window.location.reload();
+        }
+      });
   
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, [ENV]);
   
   
