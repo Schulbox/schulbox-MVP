@@ -190,42 +190,22 @@ export default function App() {
   const [clientUser, setClientUser] = useState<User>(() => user); // initial aus loader
 
   useEffect(() => {
-    if (typeof window !== "undefined" && clientUser === null) {
+    if (typeof window !== "undefined") {
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
   
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log("[App] Auth geändert:", event);
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        console.log("[App] Auth geändert:", _event);
   
-        if (!session) {
-          setClientUser(null);
-          return;
-        }
-  
-        const user = session.user;
-  
-        const { data: benutzerProfil, error } = await supabase
-          .from("benutzer")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-  
-        if (error || !benutzerProfil) {
-          setClientUser({ email: user.email });
-        } else {
-          setClientUser({
-            email: user.email,
-            role: benutzerProfil.role,
-            vorname: benutzerProfil.vorname,
-            nachname: benutzerProfil.nachname,
-          });
-        }
+        // Reload erzwingt ein frisches Laden der Root-Loader-Infos
+        window.location.reload();
       });
   
       return () => subscription.unsubscribe();
     }
-  }, [ENV, clientUser]);
+  }, [ENV]);
+  
   
 
   return (
