@@ -8,7 +8,7 @@ import {
   useRevalidator,
   useRouteError,
 } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
@@ -16,10 +16,7 @@ import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
-import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
-
-
-
+import { createBrowserClient } from "@supabase/auth-helpers-remix";
 
 export type User = {
   vorname?: string;
@@ -102,28 +99,18 @@ export async function loader(ctx: LoaderFunctionArgs) {
       data.session.access_token
     );
 
-    console.log("[root.loader] Supabase-User-ID:", data.user.id);
+    console.log("[root.loader] Supabase-User-ID für Abfrage:", data.user.id);
 
-    const { data: alleBenutzer, error: alleBenutzerError } = await refreshedSupabase
+    const { data: benutzerProfilArray, error: profilQueryError } = await refreshedSupabase
       .from("benutzer")
-      .select("*");
-    
-    console.log("[root.loader] Alle Benutzer:", alleBenutzer);
-    console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
-    
+      .select("vorname, nachname, role")
+      .eq("user_id", data.user.id);
 
-    
-    const { data: benutzerProfil, error: profilError } = await refreshedSupabase
-    .from("benutzer")
-    .select("vorname, nachname, role")
-    .eq("user_id", data.user.id)
-    .single();
-  
-    
-    if (profilError) {
-      console.error("[root.loader] Fehler beim Laden des Profils:", profilError.message);
-    }
-    
+    console.log("[root.loader] Abfrageergebnis:", benutzerProfilArray, profilQueryError);
+
+    const benutzerProfil = benutzerProfilArray && benutzerProfilArray.length > 0
+      ? benutzerProfilArray[0]
+      : null;
 
     if (!benutzerProfil) {
       console.log("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
@@ -217,7 +204,7 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((event) => {
       console.log("[App] Auth geändert:", event);
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        revalidator.revalidate(); // Kein F5, sondern nur Serverdaten neu laden
+        revalidator.revalidate();
       }
     });
 
@@ -243,4 +230,3 @@ export default function App() {
     </html>
   );
 }
-
