@@ -62,12 +62,13 @@ export default function Header({ user }: { user: User }) {
         <div className="flex items-center gap-4 text-gray-600 relative">
         {user ? (
   <div className="relative hidden md:block">
-    <button
-      onClick={() => setUserMenuOpen(!userMenuOpen)}
-      className="text-sm font-medium hover:text-blue-600"
-    >
-      {`Hallo, ${user.vorname ?? user?.email}`.trim()} ⌄
-    </button>
+<button
+  onClick={() => setUserMenuOpen(!userMenuOpen)}
+  className="text-sm font-medium hover:text-blue-600 underline underline-offset-4 decoration-dotted"
+>
+  {`Hallo, ${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()} ⌄
+</button>
+
 
               <Transition
   show={userMenuOpen}
