@@ -195,11 +195,12 @@ export default function App() {
   
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        console.log("[App] Auth geändert:", _event);
-  
-        // Reload erzwingt ein frisches Laden der Root-Loader-Infos
-        window.location.reload();
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log("[App] Auth geändert:", event);
+      
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+          window.location.reload();
+        }
       });
   
       return () => subscription.unsubscribe();
