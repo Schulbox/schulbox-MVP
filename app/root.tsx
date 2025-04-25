@@ -7,7 +7,7 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
@@ -15,6 +15,8 @@ import { getSupabaseServerClient } from "~/lib/supabase.server";
 import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
+import { createBrowserClient } from "@supabase/auth-helpers-remix"; // für Supabase Client
+
 
 export type User = {
   vorname?: string;
@@ -185,7 +187,47 @@ export function ErrorBoundary() {
 
 export default function App() {
   const { ENV, user } = useLoaderData<typeof loader>();
-  const [clientUser] = useState(user);
+  const [clientUser, setClientUser] = useState<User | null>(user);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log("[App] Auth geändert:", event);
+
+        if (!session) {
+          setClientUser(null);
+          return;
+        }
+
+        const user = session.user;
+
+        const { data: benutzerProfil, error } = await supabase
+          .from("benutzer")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error || !benutzerProfil) {
+          console.warn("[App] Kein Profil gefunden, fallback auf Email:", user.email);
+          setClientUser({ email: user.email });
+          return;
+        }
+
+        setClientUser({
+          email: user.email,
+          vorname: benutzerProfil.vorname,
+          nachname: benutzerProfil.nachname,
+          role: benutzerProfil.role,
+        });
+      });
+
+      return () => subscription.unsubscribe();
+    }
+  }, [ENV]);
 
   return (
     <html lang="de">
@@ -206,3 +248,4 @@ export default function App() {
     </html>
   );
 }
+
