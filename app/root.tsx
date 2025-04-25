@@ -111,16 +111,32 @@ export async function loader(ctx: LoaderFunctionArgs) {
     console.log("[root.loader] Alle Benutzer:", alleBenutzer);
     console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
     
+    const userResult = await refreshedSupabase.auth.getUser();
+    const userId = userResult?.data?.user?.id;
+    
 
     const { data: benutzerProfil, error: profilError } = await refreshedSupabase
     .from("benutzer")
     .select("vorname, nachname, role")
     .eq("user_id", data.user.id)
-    .single();
+    .maybeSingle();
   
     
     if (profilError) {
       console.error("[root.loader] Fehler beim Laden des Profils:", profilError.message);
+    }
+    
+    if (!userId) {
+      console.error("[root.loader] userId ist undefined – kann kein Profil laden");
+      return json({
+        user: null,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+        },
+      }, {
+        headers: { "Set-Cookie": newCookie }
+      });
     }
     
 
