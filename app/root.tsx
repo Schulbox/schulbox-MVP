@@ -108,15 +108,38 @@ export async function loader(ctx: LoaderFunctionArgs) {
       if (profileError || !profileData) {
         console.log("[root.loader] Kein Profil gefunden, erstelle neues Profil");
 
-        const basicProfile = {
-          email: data.user.email || "unbekannt",
-          role: "lehrkraft"
-        };
-
-        console.log("[root.loader] Verwende Basis-Profil:", basicProfile);
-
+        const { data: insertedProfile, error: insertError } = await refreshedSupabase
+          .from("benutzer")
+          .insert({
+            user_id: data.user.id,
+            email: data.user.email,
+            vorname: "Vorname",
+            nachname: "Nachname",
+            role: "lehrkraft"
+          })
+          .select()
+          .single();
+        
+        if (insertError || !insertedProfile) {
+          console.warn("[root.loader] Fehler beim Einfügen, fallback auf Basis-Profil");
+          return json({
+            user: {
+              email: data.user.email || "unbekannt",
+              role: "lehrkraft"
+            },
+            ENV: {
+              SUPABASE_URL: process.env.SUPABASE_URL,
+              SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+            }
+          }, {
+            headers: { "Set-Cookie": newCookie }
+          });
+        }
+        
+        console.log("[root.loader] Neues Profil erstellt:", insertedProfile);
+        
         return json({
-          user: basicProfile,
+          user: insertedProfile,
           ENV: {
             SUPABASE_URL: process.env.SUPABASE_URL,
             SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
@@ -124,6 +147,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
         }, {
           headers: { "Set-Cookie": newCookie }
         });
+        
       }
 
       const profile = {
