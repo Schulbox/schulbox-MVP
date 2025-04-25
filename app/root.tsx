@@ -102,6 +102,16 @@ export async function loader(ctx: LoaderFunctionArgs) {
       data.session.access_token
     );
 
+    console.log("[root.loader] Supabase-User-ID:", data.user.id);
+
+    const { data: alleBenutzer, error: alleBenutzerError } = await refreshedSupabase
+      .from("benutzer")
+      .select("*");
+    
+    console.log("[root.loader] Alle Benutzer:", alleBenutzer);
+    console.log("[root.loader] Alle Benutzer Query-Error:", alleBenutzerError);
+    
+
     const { data: benutzerProfil } = await refreshedSupabase
       .from("benutzer")
       .select("vorname, nachname, role")
