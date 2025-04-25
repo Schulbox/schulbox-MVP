@@ -243,10 +243,20 @@ export default function App() {
     if (typeof window !== "undefined") {
       window.ENV = ENV;
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-
+  
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          setClientUser((prev: User | null) => prev || data.user);
+          setClientUser((prev: User | null) => {
+            // Wenn Vorname oder Nachname bereits vorhanden, nichts überschreiben
+            if (prev?.vorname || prev?.nachname) return prev;
+  
+            return {
+              email: data.user.email,
+              role: undefined,
+              vorname: undefined,
+              nachname: undefined,
+            };
+          });
           console.log("[App] Clientseitig eingeloggter User:", data.user);
         } else {
           console.warn("[App] Kein User aus getUser():", error);
@@ -254,6 +264,7 @@ export default function App() {
       });
     }
   }, [ENV]);
+  
 
   return (
     <html lang="de">
