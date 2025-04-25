@@ -245,28 +245,37 @@ export default function App() {
   
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
   
+      // Benutzer beim ersten Aufruf setzen
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          if (data?.user) {
-            setClientUser((prev: User | null) => {
-              if (prev?.vorname || prev?.nachname) return prev;
-          
-              return {
-                email: data.user.email,
-                role: prev && prev.role,
-                vorname: prev && prev.vorname,
-                nachname: prev && prev.nachname,
-              };
-            });
-          } else {
-            console.log("[App] Kein User mehr → setze clientUser auf null");
-            setClientUser(null);
-          }
+          setClientUser((prev: User | null) => prev ?? { email: data.user.email });
+          console.log("[App] Clientseitig eingeloggter User:", data.user);
+        } else {
+          console.warn("[App] Kein User aus getUser():", error);
         }
-        
       });
+  
+      // HÖRE AUF LOGIN/LOGOUT ÄNDERUNGEN
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        console.log("[App] Auth-Änderung:", _event);
+  
+        if (!session) {
+          // ausgeloggt
+          setClientUser(null);
+        } else {
+          // eingeloggt
+          const user = session.user;
+          setClientUser({ email: user.email });
+        }
+      });
+  
+      // Cleanup
+      return () => subscription.unsubscribe();
     }
   }, [ENV]);
+  
   
   
 
