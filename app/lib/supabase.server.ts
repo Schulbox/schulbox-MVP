@@ -7,9 +7,9 @@ export function getSupabaseServerClient(
   refresh_token?: string,
   access_token?: string
 ) {
-  console.log("ENV SUPABASE_URL:", process.env.SUPABASE_URL);
-  console.log("ENV SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY);
-  
+  const supabaseUrl = process.env.SUPABASE_URL!;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+
   // Erstelle eine neue Request mit modifizierten Cookies
   const originalRequest = ctx.request;
   const url = new URL(originalRequest.url);
@@ -47,8 +47,8 @@ export function getSupabaseServerClient(
   });
 
   return createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       request: newRequest,
       response: new Response(),

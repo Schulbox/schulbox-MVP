@@ -27,7 +27,6 @@ export async function setSupabaseSessionCookie(
   session.set("supabaseRefreshToken", refresh_token);
   session.set("supabaseAccessToken", access_token);
   
-  // Debug-Log
   console.log("[setSupabaseSessionCookie] Tokens gespeichert:", 
     refresh_token.substring(0, 10) + "...",
     access_token.substring(0, 10) + "..."
@@ -35,8 +34,10 @@ export async function setSupabaseSessionCookie(
   
   return await commitSession(session, {
     path: "/", // wichtig!
+    maxAge: 60 * 60 * 24 * 30, // 30 Tage
   });
-}  
+}
+  
 
 /**
  * ✅ Holt beide Tokens aus der Session (z. B. im Loader)

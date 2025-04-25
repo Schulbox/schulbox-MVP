@@ -222,7 +222,8 @@ export default function App() {
 
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          setClientUser(prev => prev || data.user);
+          // In der useEffect-Funktion in root.tsx
+        setClientUser((prev: User | null) => prev || data.user);
           console.log("[App] Clientseitig eingeloggter User:", data.user);
         } else {
           console.warn("[App] Kein User aus getUser():", error);
