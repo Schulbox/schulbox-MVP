@@ -16,7 +16,7 @@ export const sessionStorage = createCookieSessionStorage({
 export const { getSession, commitSession, destroySession } = sessionStorage;
 
 /**
- * ✅ Speichert beide Tokens (Refresh Token und Access Token) in der Session
+ * ✅ Speichert beide Tokens (in kleineren Keys)
  */
 export async function setSupabaseSessionCookie(
   request: Request,
@@ -24,42 +24,39 @@ export async function setSupabaseSessionCookie(
   access_token: string
 ) {
   const session = await getSession(request.headers.get("Cookie"));
-  session.set("supabaseRefreshToken", refresh_token);
-  session.set("supabaseAccessToken", access_token);
-  
+
+  // Kürzere Schlüssel: spart wertvolle Cookie-Bytes
+  session.set("sbt", refresh_token); // sbt = Supabase Refresh Token
+  session.set("sat", access_token);  // sat = Supabase Access Token
+
   console.log("[setSupabaseSessionCookie] Tokens gespeichert:", 
-    refresh_token.substring(0, 10) + "...",
+    refresh_token.substring(0, 10) + "...", 
     access_token.substring(0, 10) + "..."
   );
-  
-  return await commitSession(session, {
-    path: "/", // wichtig!
-    maxAge: 60 * 60 * 24 * 30, // 30 Tage
-  });
+
+  return await commitSession(session); // keine extra Optionen notwendig
 }
-  
 
 /**
- * ✅ Holt beide Tokens aus der Session (z. B. im Loader)
+ * ✅ Holt Tokens aus der Session (z. B. im Loader)
  */
 export async function getSupabaseTokensFromSession(request: Request) {
   const session = await getSession(request.headers.get("Cookie"));
-  const refresh_token = session.get("supabaseRefreshToken") as string | null;
-  const access_token = session.get("supabaseAccessToken") as string | null;
-  
-  // Debug-Log
+  const refresh_token = session.get("sbt") as string | null;
+  const access_token = session.get("sat") as string | null;
+
   if (refresh_token) {
     console.log("[getSupabaseTokensFromSession] Refresh-Token gefunden:", refresh_token.substring(0, 10) + "...");
   } else {
     console.log("[getSupabaseTokensFromSession] Kein Refresh-Token in der Session gefunden");
   }
-  
+
   if (access_token) {
     console.log("[getSupabaseTokensFromSession] Access-Token gefunden:", access_token.substring(0, 10) + "...");
   } else {
     console.log("[getSupabaseTokensFromSession] Kein Access-Token in der Session gefunden");
   }
-  
+
   return {
     refresh_token,
     access_token
