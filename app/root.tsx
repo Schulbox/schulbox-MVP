@@ -187,65 +187,58 @@ export function ErrorBoundary() {
 
 export default function App() {
   const { ENV, user } = useLoaderData<typeof loader>();
-  const [clientUser, setClientUser] = useState<User | null>(user);
+  const [clientUser, setClientUser] = useState<any>(user);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-
+  
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log("[App] Auth geändert:", event);
-
+  
         if (!session) {
           setClientUser(null);
           return;
         }
-
+  
         const user = session.user;
-
+  
         const { data: benutzerProfil, error } = await supabase
           .from("benutzer")
           .select("*")
           .eq("user_id", user.id)
           .single();
-
+  
         if (error || !benutzerProfil) {
-          console.warn("[App] Kein Profil gefunden, fallback auf Email:", user.email);
           setClientUser({ email: user.email });
-          return;
+        } else {
+          setClientUser({
+            email: user.email,
+            role: benutzerProfil.role,
+            vorname: benutzerProfil.vorname,
+            nachname: benutzerProfil.nachname,
+          });
         }
-
-        setClientUser({
-          email: user.email,
-          vorname: benutzerProfil.vorname,
-          nachname: benutzerProfil.nachname,
-          role: benutzerProfil.role,
-        });
       });
-
+  
       return () => subscription.unsubscribe();
     }
   }, [ENV]);
+  
 
   return (
     <html lang="de">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Schulbox</title>
-        <Links />
-      </head>
-      <body className="bg-white text-gray-900 font-sans">
+      <head>{/* ... */}</head>
+      <body>
         <Header user={clientUser} />
-        <main>
-          <Outlet />
-        </main>
+        <main><Outlet /></main>
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
   );
 }
+
 
