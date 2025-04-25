@@ -64,10 +64,11 @@ export default function Header({ user }: { user: User }) {
   <div className="relative hidden md:block">
 <button
   onClick={() => setUserMenuOpen(!userMenuOpen)}
-  className="text-sm font-medium hover:text-blue-600 underline underline-offset-4 decoration-dotted"
+  className="text-sm font-medium hover:text-blue-600 underline"
 >
-  {`Hallo, ${user.vorname ?? ""} ${user.nachname ?? ""}`.trim()} ⌄
+  {`Hallo, ${user.vorname} ${user.nachname}`} ⌄
 </button>
+
 
 
               <Transition
