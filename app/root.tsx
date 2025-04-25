@@ -27,11 +27,7 @@ export type User = {
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&display=swap",
@@ -42,20 +38,9 @@ export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
 
-  console.log("[root.loader] Tokens aus Session:",
-    refresh_token ? "Refresh-Token vorhanden" : "kein Refresh-Token",
-    access_token ? "Access-Token vorhanden" : "kein Access-Token"
-  );
-
   if (!refresh_token || !access_token) {
     console.log("[root.loader] Keine vollständigen Tokens, User ist nicht eingeloggt");
-    return json({
-      user: null,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-      }
-    });
+    return json({ user: null, ENV: env() });
   }
 
   const supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
@@ -63,29 +48,10 @@ export async function loader(ctx: LoaderFunctionArgs) {
   try {
     const { data, error } = await supabase.auth.refreshSession({ refresh_token });
 
-    if (error) {
-      console.error("[root.loader] Fehler beim Session-Refresh:", error.message);
-      return json({
-        user: null,
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-        }
-      });
+    if (error || !data.session || !data.user) {
+      console.error("[root.loader] Fehler beim Session-Refresh:", error?.message);
+      return json({ user: null, ENV: env() });
     }
-
-    if (!data.session || !data.user) {
-      console.error("[root.loader] Session-Refresh erfolgreich, aber keine Benutzerdaten");
-      return json({
-        user: null,
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-        }
-      });
-    }
-
-    console.log("[root.loader] Session erfolgreich refreshed:", data.user.id);
 
     const newCookie = await setSupabaseSessionCookie(
       request,
@@ -99,60 +65,64 @@ export async function loader(ctx: LoaderFunctionArgs) {
       data.session.access_token
     );
 
-    console.log("[root.loader] Supabase-User-ID für Abfrage:", data.user.id);
+    console.log("[root.loader] Supabase-User-ID:", data.user.id);
+    console.log("[root.loader] Typ der User-ID:", typeof data.user.id);
+
+    const { data: alleBenutzer } = await refreshedSupabase.from("benutzer").select("*");
+    console.log("[root.loader] Alle Benutzer in DB:", alleBenutzer);
 
     const { data: benutzerProfilArray, error: profilQueryError } = await refreshedSupabase
       .from("benutzer")
       .select("vorname, nachname, role")
-      .eq("user_id", data.user.id);
+      .eq("user_id", String(data.user.id)); // explizit String vergleichen
 
-    console.log("[root.loader] Abfrageergebnis:", benutzerProfilArray, profilQueryError);
+    console.log("[root.loader] Abfrageergebnis:", benutzerProfilArray);
+    console.log("[root.loader] Abfragefehler:", profilQueryError);
 
-    const benutzerProfil = benutzerProfilArray && benutzerProfilArray.length > 0
-      ? benutzerProfilArray[0]
-      : null;
+    const benutzerProfil =
+      benutzerProfilArray && benutzerProfilArray.length > 0 ? benutzerProfilArray[0] : null;
 
     if (!benutzerProfil) {
-      console.log("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
-      return json({
-        user: {
-          email: data.user.email || "unbekannt",
-          role: "lehrkraft"
+      console.warn("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
+      return json(
+        {
+          user: {
+            email: data.user.email || "unbekannt",
+            role: "lehrkraft",
+          },
+          ENV: env(),
         },
-        ENV: {
-          SUPABASE_URL: process.env.SUPABASE_URL,
-          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        {
+          headers: { "Set-Cookie": newCookie },
         }
-      }, {
-        headers: { "Set-Cookie": newCookie }
-      });
+      );
     }
 
-    return json({
-      user: {
-        email: data.user.email,
-        role: benutzerProfil.role,
-        vorname: benutzerProfil.vorname,
-        nachname: benutzerProfil.nachname,
+    return json(
+      {
+        user: {
+          email: data.user.email,
+          role: benutzerProfil.role,
+          vorname: benutzerProfil.vorname,
+          nachname: benutzerProfil.nachname,
+        },
+        ENV: env(),
       },
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      {
+        headers: { "Set-Cookie": newCookie },
       }
-    }, {
-      headers: { "Set-Cookie": newCookie }
-    });
-
+    );
   } catch (error) {
     console.error("[root.loader] Schwerwiegender Fehler im Loader:", error);
-    return json({
-      user: null,
-      ENV: {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-      }
-    });
+    return json({ user: null, ENV: env() });
   }
+}
+
+function env() {
+  return {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  };
 }
 
 export function ErrorBoundary() {
