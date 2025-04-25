@@ -17,8 +17,6 @@ import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
 
-
-// 💡 Typ für das User-Profil
 export type User = {
   vorname?: string;
   nachname?: string;
@@ -39,142 +37,171 @@ export const links: LinksFunction = () => [
   },
 ];
 
-// ✅ Loader lädt user-Daten
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
-
-  // 🟢 1. Beide Tokens aus Session holen
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
 
-  if (typeof refresh_token === "string") {
-    console.log("[root.loader] Starte Loader mit refresh_token:", refresh_token.substring(0, 10));
-  } else {
-    console.log("[root.loader] Kein gültiger refresh_token");
+  console.log("[root.loader] Tokens aus Session:",
+    refresh_token ? "Refresh-Token vorhanden" : "kein Refresh-Token",
+    access_token ? "Access-Token vorhanden" : "kein Access-Token"
+  );
+
+  if (!refresh_token || !access_token) {
+    console.log("[root.loader] Keine vollständigen Tokens, User ist nicht eingeloggt");
+    return json({
+      user: null,
+      ENV: {
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      }
+    });
   }
 
-  if (typeof access_token === "string") {
-    console.log("[root.loader] Starte Loader mit access_token:", access_token.substring(0, 10));
-  } else {
-    console.log("[root.loader] Kein gültiger access_token");
-  }
+  const supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
 
-  // 🟡 Supabase-Client initialisieren mit beiden Tokens
-  const supabase = getSupabaseServerClient(ctx, refresh_token || undefined, access_token || undefined);
-
-  // 🟢 2. Session per refresh holen (NEU!)
-  if (typeof refresh_token === "string") {
+  try {
     const { data, error } = await supabase.auth.refreshSession({ refresh_token });
 
     if (error) {
-      console.error("[loader] Fehler beim Refresh:", error.message);
-    } else {
-      console.log("[loader] Session erfolgreich refreshed:", data.session?.user?.id);
-      
-      // Neue Tokens in der Session speichern
-      if (data.session) {
-        const newCookie = await setSupabaseSessionCookie(
-          request, 
-          data.session.refresh_token,
-          data.session.access_token
-        );
-        
-        // Neuen Supabase-Client mit aktualisierten Tokens erstellen
-        const refreshedSupabase = getSupabaseServerClient(
-          ctx, 
-          data.session.refresh_token,
-          data.session.access_token
-        );
-        
-        // 🟡 3. Session holen mit dem aktualisierten Client
-        const { data: sessionData } = await refreshedSupabase.auth.getSession();
-        const user = sessionData?.session?.user;
-        console.log("[loader] Eingeloggter User nach Refresh:", user);
-        
-        // 🟢 4. Benutzerprofil aus DB laden
-        let profile: any = null;
-        
-        if (user?.id) {
-          const { data: profileData, error: profileError } = await refreshedSupabase
-            .from("benutzer")
-            .select("vorname, nachname, role")
-            .eq("user_id", user.id)
-            .single();
-          
-          if (profileError) {
-            console.error("[loader] Fehler beim Laden des Profils:", profileError.message);
-          } else {
-            profile = {
-              email: user.email ?? "unbekannt",
-              ...profileData,
-            };
-          }
-        } else {
-          console.warn("[loader] Kein user.id verfügbar nach Refresh!");
+      console.error("[root.loader] Fehler beim Session-Refresh:", error.message);
+      return json({
+        user: null,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
         }
-        
-        console.log("[loader] Fertiges Profil nach Refresh:", profile);
-        
+      });
+    }
+
+    if (!data.session || !data.user) {
+      console.error("[root.loader] Session-Refresh erfolgreich, aber keine Benutzerdaten");
+      return json({
+        user: null,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        }
+      });
+    }
+
+    console.log("[root.loader] Session erfolgreich refreshed:", data.user.id);
+
+    const newCookie = await setSupabaseSessionCookie(
+      request,
+      data.session.refresh_token,
+      data.session.access_token
+    );
+
+    const refreshedSupabase = getSupabaseServerClient(
+      ctx,
+      data.session.refresh_token,
+      data.session.access_token
+    );
+
+    try {
+      const { data: profileData, error: profileError } = await refreshedSupabase
+        .from("benutzer")
+        .select("vorname, nachname, role")
+        .eq("user_id", data.user.id)
+        .single();
+
+      if (profileError || !profileData) {
+        console.log("[root.loader] Kein Profil gefunden, erstelle neues Profil");
+
+        const basicProfile = {
+          email: data.user.email || "unbekannt",
+          role: "lehrkraft"
+        };
+
+        console.log("[root.loader] Verwende Basis-Profil:", basicProfile);
+
         return json({
-          user: profile,
+          user: basicProfile,
           ENV: {
             SUPABASE_URL: process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-          },
-        }, {
-          headers: {
-            "Set-Cookie": newCookie
+            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
           }
+        }, {
+          headers: { "Set-Cookie": newCookie }
+        });
+      }
+
+      const profile = {
+        email: data.user.email || "unbekannt",
+        ...profileData
+      };
+
+      console.log("[root.loader] Fertiges Profil:", profile);
+
+      return json({
+        user: profile,
+        ENV: {
+          SUPABASE_URL: process.env.SUPABASE_URL,
+          SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        }
+      }, {
+        headers: { "Set-Cookie": newCookie }
+      });
+
+    } catch (err) {
+      console.error("[root.loader] Exception beim Laden des Profils:", err);
+
+      const { data: newProfile, error: insertError } = await refreshedSupabase
+        .from("benutzer")
+        .insert({
+          user_id: data.user.id,
+          email: data.user.email,
+          vorname: "Neuer",
+          nachname: "Benutzer",
+          role: "lehrkraft"
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("[root.loader] Fehler beim Erstellen des Profils:", insertError.message);
+
+        return json({
+          user: {
+            email: data.user.email || "unbekannt",
+            role: "lehrkraft"
+          },
+          ENV: {
+            SUPABASE_URL: process.env.SUPABASE_URL,
+            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+          }
+        }, {
+          headers: { "Set-Cookie": newCookie }
+        });
+      } else {
+        console.log("[root.loader] Neues Profil erstellt:", newProfile);
+        return json({
+          user: newProfile,
+          ENV: {
+            SUPABASE_URL: process.env.SUPABASE_URL,
+            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+          }
+        }, {
+          headers: { "Set-Cookie": newCookie }
         });
       }
     }
+  } catch (error) {
+    console.error("[root.loader] Schwerwiegender Fehler im Loader:", error);
+    return json({
+      user: null,
+      ENV: {
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      }
+    });
   }
-
-  // 🟡 3. Session holen (falls kein Refresh durchgeführt wurde)
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
-  console.log("[loader] Eingeloggter User:", user);
-
-  // 🟢 4. Benutzerprofil aus DB laden
-  let profile: any = null;
-
-  if (user?.id) {
-    const { data, error } = await supabase
-      .from("benutzer")
-      .select("vorname, nachname, role")
-      .eq("user_id", user.id)
-      .single();
-
-    if (error) {
-      console.error("[loader] Fehler beim Laden des Profils:", error.message);
-    } else {
-      profile = {
-        email: user.email ?? "unbekannt",
-        ...data,
-      };
-    }
-  } else {
-    console.warn("[loader] Kein user.id verfügbar!");
-  }
-
-  console.log("[loader] Fertiges Profil:", profile);
-
-  return json({
-    user: profile,
-    ENV: {
-      SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    },
-  });
 }
 
-
-
-
-// ✅ Fehlerbehandlung für die gesamte App
 export function ErrorBoundary() {
   const error = useRouteError();
   console.error("[ErrorBoundary] App-Fehler:", error);
-  
+
   return (
     <html lang="de">
       <head>
@@ -192,8 +219,8 @@ export function ErrorBoundary() {
               <p className="mb-4">
                 Es tut uns leid, aber bei der Verarbeitung Ihrer Anfrage ist ein Fehler aufgetreten.
               </p>
-              <button 
-                onClick={() => window.location.reload()} 
+              <button
+                onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Seite neu laden
@@ -208,7 +235,6 @@ export function ErrorBoundary() {
   );
 }
 
-// ✅ Finale App mit HTML-Wrapper, Header und Outlet
 export default function App() {
   const { ENV, user } = useLoaderData<typeof loader>();
   const [clientUser, setClientUser] = useState<any>(user);
@@ -216,14 +242,11 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.ENV = ENV;
-
-      // Supabase-Client erstellen und User holen
       const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
 
       supabase.auth.getUser().then(({ data, error }) => {
         if (data?.user) {
-          // In der useEffect-Funktion in root.tsx
-        setClientUser((prev: User | null) => prev || data.user);
+          setClientUser((prev: User | null) => prev || data.user);
           console.log("[App] Clientseitig eingeloggter User:", data.user);
         } else {
           console.warn("[App] Kein User aus getUser():", error);
