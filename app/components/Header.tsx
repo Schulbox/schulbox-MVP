@@ -1,6 +1,6 @@
 // app/components/Header.tsx
 import { Link } from "@remix-run/react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 
 type User = {
@@ -13,10 +13,32 @@ type User = {
 export default function Header({ user }: { user: User }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLinkClick = () => {
     setMenuOpen(false);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
@@ -60,53 +82,59 @@ export default function Header({ user }: { user: User }) {
 
         {/* Icons + Login */}
         <div className="flex items-center gap-4 text-gray-600 relative">
-        {user ? (
-  <div className="relative hidden md:block">
-<button
-  onClick={() => setUserMenuOpen(!userMenuOpen)}
-  className="text-sm font-medium hover:text-blue-600 underline"
->
-  {`Hallo, ${user.vorname} ${user.nachname}`} ⌄
-</button>
-
-
+          {user ? (
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="text-sm font-medium hover:text-blue-600 underline"
+              >
+                {`Hallo, ${user.vorname} ${user.nachname}`} ⌄
+              </button>
 
               <Transition
-  show={userMenuOpen}
-  enter="transition ease-out duration-200"
-  enterFrom="opacity-0 translate-y-1"
-  enterTo="opacity-100 translate-y-0"
-  leave="transition ease-in duration-150"
-  leaveFrom="opacity-100 translate-y-0"
-  leaveTo="opacity-0 translate-y-1"
->
-  <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white/80 backdrop-blur-md ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
-    <Link
-      to="/profil"
-      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-    >
-      📝 Profil bearbeiten
-    </Link>
-    <Link
-      to="/logout"
-      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-    >
-      🚪 Ausloggen
-    </Link>
-    <Link
-      to="/cart"
-      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-    >
-      🛒 Einkaufswagen
-    </Link>
-  </div>
-</Transition>
-
+                show={userMenuOpen}
+                enter="transition ease-out duration-200"
+                enterFrom="opacity-0 translate-y-1"
+                enterTo="opacity-100 translate-y-0"
+                leave="transition ease-in duration-150"
+                leaveFrom="opacity-100 translate-y-0"
+                leaveTo="opacity-0 translate-y-1"
+              >
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white/80 backdrop-blur-md ring-1 ring-black ring-opacity-5 z-50 overflow-hidden"
+                >
+                  <Link
+                    to="/profil"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
+                  >
+                    Profil bearbeiten
+                  </Link>
+                  <Link
+                    to="/logout"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
+                  >
+                    Ausloggen
+                  </Link>
+                  <Link
+                    to="/cart"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
+                  >
+                    Einkaufswagen
+                  </Link>
+                </div>
+              </Transition>
             </div>
           ) : (
             <div className="hidden md:block">
               <Link to="/login" title="Einloggen">
-                <span role="img" aria-label="Login" className="text-xl">👤</span>
+                <span
+                  role="img"
+                  aria-label="Login"
+                  className="text-xl transition-transform duration-200 hover:scale-110 hover:text-blue-500 active:scale-90"
+                >
+                  👤
+                </span>
               </Link>
             </div>
           )}
@@ -149,7 +177,9 @@ export default function Header({ user }: { user: User }) {
             <hr />
             {user ? (
               <>
-                <p className="text-sm font-medium text-gray-600"> {`Hallo, ${user?.vorname ?? user?.email ?? ""} ${user?.nachname ?? ""}`.trim()}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {`Hallo, ${user?.vorname ?? user?.email ?? ""} ${user?.nachname ?? ""}`.trim()}
+                </p>
                 <Link to="/profil" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Profil bearbeiten</Link>
                 <Link to="/logout" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Ausloggen</Link>
               </>
