@@ -7,8 +7,7 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/auth-helpers-remix";
+import { useState } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
@@ -21,7 +20,7 @@ export type User = {
   vorname?: string;
   nachname?: string;
   role?: string;
-  email: string;
+  email?: string;
 } | null;
 
 export const links: LinksFunction = () => [
@@ -98,43 +97,19 @@ export async function loader(ctx: LoaderFunctionArgs) {
       data.session.access_token
     );
 
-    try {
-      const { data: profileData, error: profileError } = await refreshedSupabase
-        .from("benutzer")
-        .select("vorname, nachname, role")
-        .eq("user_id", data.user.id)
-        .single();
+    const { data: benutzerProfil } = await refreshedSupabase
+      .from("benutzer")
+      .select("vorname, nachname, role")
+      .eq("user_id", data.user.id)
+      .single();
 
-      if (profileError || !profileData) {
-        console.log("[root.loader] Kein Profil gefunden, erstelle neues Profil");
-
-        const basicProfile = {
+    if (!benutzerProfil) {
+      console.log("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
+      return json({
+        user: {
           email: data.user.email || "unbekannt",
           role: "lehrkraft"
-        };
-
-        console.log("[root.loader] Verwende Basis-Profil:", basicProfile);
-
-        return json({
-          user: basicProfile,
-          ENV: {
-            SUPABASE_URL: process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-          }
-        }, {
-          headers: { "Set-Cookie": newCookie }
-        });
-      }
-
-      const profile = {
-        email: data.user.email || "unbekannt",
-        ...profileData
-      };
-
-      console.log("[root.loader] Fertiges Profil:", profile);
-
-      return json({
-        user: profile,
+        },
         ENV: {
           SUPABASE_URL: process.env.SUPABASE_URL,
           SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
@@ -142,50 +117,23 @@ export async function loader(ctx: LoaderFunctionArgs) {
       }, {
         headers: { "Set-Cookie": newCookie }
       });
-
-    } catch (err) {
-      console.error("[root.loader] Exception beim Laden des Profils:", err);
-
-      const { data: newProfile, error: insertError } = await refreshedSupabase
-        .from("benutzer")
-        .insert({
-          user_id: data.user.id,
-          email: data.user.email,
-          vorname: "Neuer",
-          nachname: "Benutzer",
-          role: "lehrkraft"
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("[root.loader] Fehler beim Erstellen des Profils:", insertError.message);
-
-        return json({
-          user: {
-            email: data.user.email || "unbekannt",
-            role: "lehrkraft"
-          },
-          ENV: {
-            SUPABASE_URL: process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-          }
-        }, {
-          headers: { "Set-Cookie": newCookie }
-        });
-      } else {
-        console.log("[root.loader] Neues Profil erstellt:", newProfile);
-        return json({
-          user: newProfile,
-          ENV: {
-            SUPABASE_URL: process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-          }
-        }, {
-          headers: { "Set-Cookie": newCookie }
-        });
-      }
     }
+
+    return json({
+      user: {
+        email: data.user.email,
+        role: benutzerProfil.role,
+        vorname: benutzerProfil.vorname,
+        nachname: benutzerProfil.nachname,
+      },
+      ENV: {
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      }
+    }, {
+      headers: { "Set-Cookie": newCookie }
+    });
+
   } catch (error) {
     console.error("[root.loader] Schwerwiegender Fehler im Loader:", error);
     return json({
@@ -237,47 +185,7 @@ export function ErrorBoundary() {
 
 export default function App() {
   const { ENV, user } = useLoaderData<typeof loader>();
-  const [clientUser, setClientUser] = useState<any>(user);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.ENV = ENV;
-  
-      const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-  
-      // Benutzer beim ersten Aufruf setzen
-      supabase.auth.getUser().then(({ data, error }) => {
-        if (data?.user) {
-          setClientUser((prev: User | null) => prev ?? { email: data.user.email });
-          console.log("[App] Clientseitig eingeloggter User:", data.user);
-        } else {
-          console.warn("[App] Kein User aus getUser():", error);
-        }
-      });
-  
-      // HÖRE AUF LOGIN/LOGOUT ÄNDERUNGEN
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        console.log("[App] Auth-Änderung:", _event);
-  
-        if (!session) {
-          // ausgeloggt
-          setClientUser(null);
-        } else {
-          // eingeloggt
-          const user = session.user;
-          setClientUser({ email: user.email });
-        }
-      });
-  
-      // Cleanup
-      return () => subscription.unsubscribe();
-    }
-  }, [ENV]);
-  
-  
-  
+  const [clientUser] = useState(user);
 
   return (
     <html lang="de">

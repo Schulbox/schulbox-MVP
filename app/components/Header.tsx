@@ -7,7 +7,7 @@ type User = {
   vorname?: string;
   nachname?: string;
   role?: string;
-  email: string;
+  email?: string;
 } | null;
 
 export default function Header({ user }: { user: User }) {
@@ -66,7 +66,7 @@ export default function Header({ user }: { user: User }) {
       onClick={() => setUserMenuOpen(!userMenuOpen)}
       className="text-sm font-medium hover:text-blue-600"
     >
-      {`Hallo, ${user.vorname ?? user.email}`.trim()} ⌄
+      {`Hallo, ${user.vorname ?? user?.email}`.trim()} ⌄
     </button>
 
               <Transition
