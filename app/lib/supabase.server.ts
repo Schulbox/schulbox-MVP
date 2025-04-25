@@ -1,4 +1,3 @@
-// app/lib/supabase.server.ts
 import { createServerClient } from "@supabase/auth-helpers-remix";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 
@@ -9,34 +8,31 @@ export function getSupabaseServerClient(
 ) {
   const supabaseUrl = process.env.SUPABASE_URL!;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-
-  // Erstelle eine neue Request mit modifizierten Cookies
   const originalRequest = ctx.request;
   const url = new URL(originalRequest.url);
-  
-  // Erstelle eine neue Request mit den gleichen Eigenschaften
   const newHeaders = new Headers(originalRequest.headers);
-  
-  // Füge die Tokens als Cookies hinzu, wenn sie vorhanden sind
+
+  // ⬇️ Ersetze Cookies
   if (refresh_token || access_token) {
     const cookieHeader = newHeaders.get("Cookie") || "";
-    let cookies = cookieHeader.split('; ').filter(c => 
-      !c.startsWith('sb-refresh-token=') && !c.startsWith('sb-access-token=')
+    let cookies = cookieHeader.split("; ").filter(c =>
+      !c.startsWith("sb-refresh-token=") && !c.startsWith("sb-access-token=")
     );
-    
+
     if (refresh_token) {
       cookies.push(`sb-refresh-token=${refresh_token}`);
       console.log("[supabase.server] Verwende refresh_token für Request");
     }
-    
+
     if (access_token) {
       cookies.push(`sb-access-token=${access_token}`);
       console.log("[supabase.server] Verwende access_token für Request");
+      newHeaders.set("Authorization", `Bearer ${access_token}`); // ⬅️ wichtig!
     }
-    
-    newHeaders.set("Cookie", cookies.join('; '));
+
+    newHeaders.set("Cookie", cookies.join("; "));
   }
-  
+
   const newRequest = new Request(url.toString(), {
     method: originalRequest.method,
     headers: newHeaders,
