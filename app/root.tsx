@@ -34,6 +34,13 @@ export const links: LinksFunction = () => [
   },
 ];
 
+function env() {
+  return {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  };
+}
+
 export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
@@ -66,63 +73,69 @@ export async function loader(ctx: LoaderFunctionArgs) {
     );
 
     console.log("[root.loader] Supabase-User-ID:", data.user.id);
-    console.log("[root.loader] Typ der User-ID:", typeof data.user.id);
 
-    const { data: alleBenutzer } = await refreshedSupabase.from("benutzer").select("*");
-    console.log("[root.loader] Alle Benutzer in DB:", alleBenutzer);
+    const { data: benutzerProfilRPC, error: rpcError } = await refreshedSupabase
+      .rpc('get_benutzer_profil', { user_id_param: data.user.id });
 
-    const { data: benutzerProfilArray, error: profilQueryError } = await refreshedSupabase
-      .from("benutzer")
-      .select("vorname, nachname, role")
-      .eq("user_id", String(data.user.id)); // explizit String vergleichen
+    console.log("[root.loader] RPC-Abfrageergebnis:", benutzerProfilRPC);
+    console.log("[root.loader] RPC-Abfragefehler:", rpcError);
 
-    console.log("[root.loader] Abfrageergebnis:", benutzerProfilArray);
-    console.log("[root.loader] Abfragefehler:", profilQueryError);
+    if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
+      console.log("[root.loader] Kein Profil gefunden, erstelle ein neues Profil");
 
-    const benutzerProfil =
-      benutzerProfilArray && benutzerProfilArray.length > 0 ? benutzerProfilArray[0] : null;
+      const { data: neuesBenutzerProfil, error: upsertError } = await refreshedSupabase.rpc('upsert_benutzer_profil', {
+        user_id_param: data.user.id,
+        email_param: data.user.email,
+        role_param: 'lehrkraft',
+      });
 
-    if (!benutzerProfil) {
-      console.warn("[root.loader] Kein Profil gefunden, verwende E-Mail + Rolle");
-      return json(
-        {
+      console.log("[root.loader] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
+      console.log("[root.loader] Fehler bei Profilerstellung:", upsertError);
+
+      if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
+        return json({
           user: {
-            email: data.user.email || "unbekannt",
-            role: "lehrkraft",
+            email: data.user.email,
+            role: neuesBenutzerProfil[0].role,
+            vorname: neuesBenutzerProfil[0].vorname,
+            nachname: neuesBenutzerProfil[0].nachname,
           },
           ENV: env(),
-        },
-        {
-          headers: { "Set-Cookie": newCookie },
-        }
-      );
-    }
+        }, {
+          headers: { "Set-Cookie": newCookie }
+        });
+      }
 
-    return json(
-      {
+      // Fallback wenn Profilerstellung fehlschlägt
+      return json({
         user: {
-          email: data.user.email,
-          role: benutzerProfil.role,
-          vorname: benutzerProfil.vorname,
-          nachname: benutzerProfil.nachname,
+          email: data.user.email || "unbekannt",
+          role: "lehrkraft",
         },
         ENV: env(),
+      }, {
+        headers: { "Set-Cookie": newCookie }
+      });
+    }
+
+    const benutzerProfil = benutzerProfilRPC[0];
+
+    return json({
+      user: {
+        email: data.user.email,
+        role: benutzerProfil.role,
+        vorname: benutzerProfil.vorname,
+        nachname: benutzerProfil.nachname,
       },
-      {
-        headers: { "Set-Cookie": newCookie },
-      }
-    );
+      ENV: env(),
+    }, {
+      headers: { "Set-Cookie": newCookie }
+    });
+
   } catch (error) {
     console.error("[root.loader] Schwerwiegender Fehler im Loader:", error);
     return json({ user: null, ENV: env() });
   }
-}
-
-function env() {
-  return {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  };
 }
 
 export function ErrorBoundary() {
