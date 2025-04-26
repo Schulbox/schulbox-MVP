@@ -19,6 +19,7 @@ export default function Header({ user }: { user: User }) {
     setMenuOpen(false);
   };
 
+  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -85,7 +86,7 @@ export default function Header({ user }: { user: User }) {
           {user ? (
             <div className="relative hidden md:block">
               <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                onClick={() => setUserMenuOpen(prev => !prev)}
                 className="text-sm font-medium hover:text-blue-600 underline"
               >
                 {`Hallo, ${user.vorname} ${user.nachname}`} ⌄
@@ -111,16 +112,17 @@ export default function Header({ user }: { user: User }) {
                     Profil bearbeiten
                   </Link>
                   <Link
-                    to="/logout"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
-                  >
-                    Ausloggen
-                  </Link>
-                  <Link
                     to="/cart"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
                   >
                     Einkaufswagen
+                  </Link>
+                  <div className="border-t my-1" />
+                  <Link
+                    to="/logout"
+                    className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 text-right transition"
+                  >
+                    Ausloggen
                   </Link>
                 </div>
               </Transition>
@@ -131,7 +133,7 @@ export default function Header({ user }: { user: User }) {
                 <span
                   role="img"
                   aria-label="Login"
-                  className="text-xl transition-transform duration-200 hover:scale-110 hover:text-blue-500 active:scale-90"
+                  className="text-xl transition-all duration-200 ease-in-out hover:scale-110 hover:text-blue-500 active:scale-90 cursor-pointer"
                 >
                   👤
                 </span>
@@ -139,7 +141,13 @@ export default function Header({ user }: { user: User }) {
             </div>
           )}
           <Link to="/cart" title="Warenkorb">
-            <span role="img" aria-label="Warenkorb" className="text-xl">🛒</span>
+            <span
+              role="img"
+              aria-label="Warenkorb"
+              className="text-xl transition-transform duration-200 hover:scale-110 active:scale-90"
+            >
+              🛒
+            </span>
           </Link>
 
           {/* Hamburger Mobil */}
@@ -181,7 +189,8 @@ export default function Header({ user }: { user: User }) {
                   {`Hallo, ${user?.vorname ?? user?.email ?? ""} ${user?.nachname ?? ""}`.trim()}
                 </p>
                 <Link to="/profil" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Profil bearbeiten</Link>
-                <Link to="/logout" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Ausloggen</Link>
+                <Link to="/cart" onClick={handleLinkClick} className="block text-gray-800 hover:text-blue-600">Einkaufswagen</Link>
+                <Link to="/logout" onClick={handleLinkClick} className="block text-red-600 hover:text-red-800">Ausloggen</Link>
               </>
             ) : (
               <Link to="/login" onClick={handleLinkClick} className="block text-gray-800 font-medium hover:text-blue-600">👤 Einloggen</Link>
