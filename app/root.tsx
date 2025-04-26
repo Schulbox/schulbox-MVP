@@ -1,4 +1,4 @@
-// app/root.tsx
+// app/root.tsx - localStorage-basierte Lösung
 import {
   Links,
   Outlet,
@@ -8,7 +8,7 @@ import {
   useRevalidator,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
@@ -45,97 +45,21 @@ export async function loader(ctx: LoaderFunctionArgs) {
   const { request } = ctx;
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
 
+  // Wenn kein Session-Marker gefunden wurde, ist der Benutzer nicht eingeloggt
   if (!refresh_token || !access_token) {
-    console.log("[root.loader] Keine vollständigen Tokens, User ist nicht eingeloggt");
+    console.log("[root.loader] Keine Session gefunden, User ist nicht eingeloggt");
     return json({ user: null, ENV: env() });
   }
 
-  const supabase = getSupabaseServerClient(ctx, refresh_token, access_token);
-
-  try {
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
-
-    if (error || !data.session || !data.user) {
-      console.error("[root.loader] Fehler beim Session-Refresh:", error?.message);
-      return json({ user: null, ENV: env() });
-    }
-
-    const cookieHeader = await setSupabaseSessionCookie(
-      request,
-      data.session.refresh_token,
-      data.session.access_token
-    );
-
-    const refreshedSupabase = getSupabaseServerClient(
-      ctx,
-      data.session.refresh_token,
-      data.session.access_token
-    );
-
-    console.log("[root.loader] Supabase-User-ID:", data.user.id);
-
-    const { data: benutzerProfilRPC, error: rpcError } = await refreshedSupabase
-      .rpc('get_benutzer_profil', { user_id_param: data.user.id });
-
-    console.log("[root.loader] RPC-Abfrageergebnis:", benutzerProfilRPC);
-    console.log("[root.loader] RPC-Abfragefehler:", rpcError);
-
-    if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
-      console.log("[root.loader] Kein Profil gefunden, erstelle ein neues Profil");
-
-      const { data: neuesBenutzerProfil, error: upsertError } = await refreshedSupabase.rpc('upsert_benutzer_profil', {
-        user_id_param: data.user.id,
-        email_param: data.user.email,
-        role_param: 'lehrkraft',
-      });
-
-      console.log("[root.loader] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
-      console.log("[root.loader] Fehler bei Profilerstellung:", upsertError);
-
-      if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
-        return json({
-          user: {
-            email: data.user.email,
-            role: neuesBenutzerProfil[0].role,
-            vorname: neuesBenutzerProfil[0].vorname,
-            nachname: neuesBenutzerProfil[0].nachname,
-          },
-          ENV: env(),
-        }, {
-          headers: { "Set-Cookie": cookieHeader }
-        });
-      }
-
-      // Fallback wenn Profilerstellung fehlschlägt
-      return json({
-        user: {
-          email: data.user.email || "unbekannt",
-          role: "lehrkraft",
-        },
-        ENV: env(),
-      }, {
-        headers: { "Set-Cookie": cookieHeader }
-      });
-    }
-
-    const benutzerProfil = benutzerProfilRPC[0];
-
-    return json({
-      user: {
-        email: data.user.email,
-        role: benutzerProfil.role,
-        vorname: benutzerProfil.vorname,
-        nachname: benutzerProfil.nachname,
-      },
-      ENV: env(),
-    }, {
-      headers: { "Set-Cookie": cookieHeader }
-    });
-
-  } catch (error) {
-    console.error("[root.loader] Schwerwiegender Fehler im Loader:", error);
-    return json({ user: null, ENV: env() });
-  }
+  // Hier wird nur geprüft, ob der Session-Marker vorhanden ist
+  // Die eigentlichen Tokens werden clientseitig aus localStorage geholt
+  console.log("[root.loader] Session-Marker gefunden, User ist eingeloggt");
+  
+  // Wir geben nur die ENV-Variablen zurück, der Rest wird clientseitig gehandhabt
+  return json({ 
+    user: null, // Wird clientseitig gefüllt
+    ENV: env() 
+  });
 }
 
 export function ErrorBoundary() {
@@ -176,23 +100,115 @@ export function ErrorBoundary() {
 }
 
 export default function App() {
-  const { ENV, user } = useLoaderData<typeof loader>();
+  const { ENV } = useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
+  const [user, setUser] = useState<User>(null);
 
   useEffect(() => {
+    // Hole Tokens aus localStorage
+    const refresh_token = localStorage.getItem('sb-refresh-token');
+    const access_token = localStorage.getItem('sb-access-token');
+    
+    if (!refresh_token || !access_token) {
+      console.log("[App] Keine Tokens im localStorage gefunden");
+      return;
+    }
+    
+    console.log("[App] Tokens aus localStorage geladen");
+    
+    // Erstelle Supabase-Client mit den Tokens aus localStorage
     const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-
+    
+    // Setze die Tokens im Supabase-Client
+    supabase.auth.setSession({
+      refresh_token,
+      access_token
+    });
+    
+    // Hole Benutzerdaten
+    const fetchUserData = async () => {
+      try {
+        // Hole Benutzer-ID
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) {
+          console.error("[App] Kein Benutzer gefunden");
+          return;
+        }
+        
+        console.log("[App] Benutzer-ID:", authData.user.id);
+        
+        // Hole Benutzerprofil mit RPC
+        const { data: benutzerProfilRPC, error: rpcError } = await supabase
+          .rpc('get_benutzer_profil', { user_id_param: authData.user.id });
+        
+        console.log("[App] RPC-Abfrageergebnis:", benutzerProfilRPC);
+        console.log("[App] RPC-Abfragefehler:", rpcError);
+        
+        if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
+          console.log("[App] Kein Profil gefunden, erstelle ein neues Profil");
+          
+          const { data: neuesBenutzerProfil, error: upsertError } = await supabase.rpc('upsert_benutzer_profil', {
+            user_id_param: authData.user.id,
+            email_param: authData.user.email,
+            role_param: 'lehrkraft',
+          });
+          
+          console.log("[App] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
+          console.log("[App] Fehler bei Profilerstellung:", upsertError);
+          
+          if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
+            setUser({
+              email: authData.user.email,
+              role: neuesBenutzerProfil[0].role,
+              vorname: neuesBenutzerProfil[0].vorname,
+              nachname: neuesBenutzerProfil[0].nachname,
+            });
+            return;
+          }
+          
+          // Fallback wenn Profilerstellung fehlschlägt
+          setUser({
+            email: authData.user.email || "unbekannt",
+            role: "lehrkraft",
+          });
+          return;
+        }
+        
+        const benutzerProfil = benutzerProfilRPC[0];
+        
+        setUser({
+          email: authData.user.email,
+          role: benutzerProfil.role,
+          vorname: benutzerProfil.vorname,
+          nachname: benutzerProfil.nachname,
+        });
+      } catch (error) {
+        console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
+      }
+    };
+    
+    fetchUserData();
+    
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       console.log("[App] Auth geändert:", event);
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
         revalidator.revalidate();
+        
+        if (event === "SIGNED_OUT") {
+          // Lösche Tokens aus localStorage
+          localStorage.removeItem('sb-refresh-token');
+          localStorage.removeItem('sb-access-token');
+          setUser(null);
+        } else if (event === "SIGNED_IN") {
+          fetchUserData();
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [ENV]);
+  }, [ENV, revalidator]);
 
   return (
     <html lang="de">

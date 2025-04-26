@@ -1,10 +1,19 @@
-// app/routes/login.tsx
+// app/routes/login.tsx - localStorage-basierte Lösung
 import { Form, useActionData, useNavigation, Link, useSearchParams } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useEffect } from "react";
 import { supabase } from "~/lib/supabaseClient";
 import { setSupabaseSessionCookie } from "~/lib/session.server";
+
+type LoginResponse = {
+  success?: boolean;
+  tokens?: {
+    refresh_token: string;
+    access_token: string;
+  };
+  error?: string;
+};
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const form = await request.formData();
@@ -28,18 +37,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       session_token_length: data.session.refresh_token?.length || 0
     });
     
-    const cookieHeader = await setSupabaseSessionCookie(
+    // Setze nur den Session-Marker im Cookie
+    const cookie = await setSupabaseSessionCookie(
       request, 
       data.session.refresh_token,
       data.session.access_token
     );
 
-    // 👉 hier: Redirect mit URL-Parameter und korrektem Cookie-Header
-    return redirect("/?refreshed=1", {
-      headers: {
-        "Set-Cookie": cookieHeader,
+    // Übergebe die Tokens an den Client zur Speicherung im localStorage
+    return json(
+      { 
+        success: true,
+        tokens: {
+          refresh_token: data.session.refresh_token,
+          access_token: data.session.access_token
+        }
       },
-    });
+      {
+        headers: {
+          "Set-Cookie": cookie,
+        }
+      }
+    );
   } catch (err) {
     console.error("[login.action] Unerwarteter Fehler:", err);
     return json({ 
@@ -50,15 +69,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Login() {
   const navigation = useNavigation();
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<LoginResponse>();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    // 👉 hier: Wenn "?refreshed=1" vorhanden ist, Seite neu laden
-    if (searchParams.get("refreshed") === "1") {
-      window.location.href = "/";
-    }
-  }, [searchParams]);
+// In login.tsx
+useEffect(() => {
+  // Wenn Login erfolgreich war und Tokens zurückgegeben wurden
+  if (actionData && 
+      'success' in actionData && 
+      actionData.success === true && 
+      'tokens' in actionData && 
+      actionData.tokens) {
+    
+    // Speichere Tokens im localStorage
+    localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
+    localStorage.setItem('sb-access-token', actionData.tokens.access_token);
+    
+    // Navigiere zur Startseite
+    window.location.href = "/";
+  }
+}, [actionData]);
+
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen pt-20 p-4">
