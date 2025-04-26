@@ -1,9 +1,8 @@
-// app/components/Header.tsx
 import { Link, useNavigate } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, ShoppingCart, LogOut } from "lucide-react";
+import { User, ShoppingCart, LogOut, ChevronDown } from "lucide-react";
 import { LoginModal } from "~/components/LoginModal";
 
 type UserType = {
@@ -22,10 +21,6 @@ export default function Header({ user }: { user: UserType }) {
   const navigate = useNavigate();
 
   const handleLinkClick = () => setMenuOpen(false);
-
-  useEffect(() => {
-    setUserMenuOpen(false);
-  }, [user?.email]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,30 +43,16 @@ export default function Header({ user }: { user: UserType }) {
   const handleLogout = async () => {
     try {
       console.log("Logout gestartet...");
-      
-      // Lösche Tokens aus localStorage
       localStorage.removeItem('sb-refresh-token');
       localStorage.removeItem('sb-access-token');
       localStorage.removeItem('user-profile-cache');
       localStorage.removeItem('user-profile-cache-time');
-      
       console.log("Tokens aus localStorage gelöscht");
-      
-      // Sende Anfrage zum Löschen des Session-Markers
-      await fetch("/api/logout", { 
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-      
+      await fetch("/api/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
       console.log("Logout-Anfrage gesendet");
-      
-      // Lade die Seite neu zur Login-Seite
       navigate("/login");
     } catch (error) {
       console.error("Fehler beim Logout:", error);
-      // Auch bei Fehler zur Login-Seite navigieren
       navigate("/login");
     }
   };
@@ -116,11 +97,11 @@ export default function Header({ user }: { user: UserType }) {
           </div>
         </div>
 
-        {/* Icons + Login */}
+        {/* Icons */}
         <div className="flex items-center gap-4 text-gray-600 relative">
+          {/* Login */}
           {!user && (
             <div className="hidden md:flex items-center gap-4">
-              {/* Login Icon */}
               <div
                 className="relative group"
                 onMouseEnter={() => setHoveredIcon("login")}
@@ -159,7 +140,7 @@ export default function Header({ user }: { user: UserType }) {
             </div>
           )}
 
-          {/* Warenkorb Icon immer */}
+          {/* Warenkorb Icon */}
           <div
             className="relative group"
             onMouseEnter={() => setHoveredIcon("cart")}
@@ -191,44 +172,60 @@ export default function Header({ user }: { user: UserType }) {
             </AnimatePresence>
           </div>
 
-          {/* Logout Icon für eingeloggte Nutzer */}
+          {/* Hallo Box */}
           {user && (
-            <div
-              className="relative group"
-              onMouseEnter={() => setHoveredIcon("logout")}
-              onMouseLeave={() => setHoveredIcon(null)}
-            >
-              <motion.div
-                onClick={handleLogout}
-                initial={{ color: "#6B7280" }}
-                whileHover={{ scale: 1.2, color: "#EF4444" }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="cursor-pointer"
+            <div className="hidden md:flex flex-col items-center justify-center relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition relative"
               >
-                <LogOut className="h-6 w-6" />
-              </motion.div>
-              <AnimatePresence>
-                {hoveredIcon === "logout" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
+                <div className="text-xs text-gray-500">Hallo</div>
+                <div className="text-sm font-semibold flex items-center gap-1">
+                  {user.vorname} {user.nachname}
+                  <motion.span
+                    animate={{ rotate: userMenuOpen ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
                   >
-                    Abmelden
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+                    <ChevronDown className="h-4 w-4" />
+                  </motion.span>
+                </div>
+              </button>
 
-          {/* Hallo Box für eingeloggte Nutzer */}
-          {user && (
-            <div className="hidden md:flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition">
-              <div className="text-xs text-gray-500">Hallo</div>
-              <div className="text-sm font-semibold">{user.vorname} {user.nachname}</div>
+              {/* Dropdown */}
+              <Transition
+                show={userMenuOpen}
+                enter="transition ease-out duration-200"
+                enterFrom="opacity-0 translate-y-1"
+                enterTo="opacity-100 translate-y-0"
+                leave="transition ease-in duration-150"
+                leaveFrom="opacity-100 translate-y-0"
+                leaveTo="opacity-0 translate-y-1"
+              >
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white/80 backdrop-blur-md ring-1 ring-black ring-opacity-5 z-50 overflow-hidden"
+                >
+                  <Link
+                    to="/profil"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
+                  >
+                    Profil bearbeiten
+                  </Link>
+                  <Link
+                    to="/cart"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
+                  >
+                    Einkaufswagen
+                  </Link>
+                  <div className="border-t my-1" />
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition"
+                  >
+                    Ausloggen
+                  </button>
+                </div>
+              </Transition>
             </div>
           )}
         </div>
