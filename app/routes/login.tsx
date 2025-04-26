@@ -1,18 +1,14 @@
-// app/routes/login.tsx - Optimierte Version
-import { Form, useActionData, useNavigate, Link } from "@remix-run/react";
+// app/routes/login.tsx - Vereinfachte Version
+import { Form, useActionData, Link } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useEffect, useRef } from "react";
+import { json, redirect } from "@remix-run/node";
+import { useEffect } from "react";
 import { supabase } from "~/lib/supabaseClient";
 import { setSupabaseSessionCookie } from "~/lib/session.server";
 
 // Typ für die Antwort vom Server
 type LoginResponse = {
   success?: boolean;
-  tokens?: {
-    refresh_token: string;
-    access_token: string;
-  };
   error?: string;
 };
 
@@ -45,18 +41,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       data.session.access_token
     );
 
-    // Übergebe die Tokens an den Client zur Speicherung im localStorage
+    // Speichere Tokens im localStorage (clientseitig)
     return json<LoginResponse>(
-      { 
-        success: true,
-        tokens: {
-          refresh_token: data.session.refresh_token,
-          access_token: data.session.access_token
-        }
-      },
+      { success: true },
       {
         headers: {
           "Set-Cookie": cookie,
+          // Setze einen speziellen Header, der vom Client erkannt wird
+          "X-Supabase-Refresh-Token": data.session.refresh_token,
+          "X-Supabase-Access-Token": data.session.access_token
         }
       }
     );
@@ -69,28 +62,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Login() {
-  const navigate = useNavigate();
   const actionData = useActionData<LoginResponse>();
-  const isNavigatingRef = useRef(false);
 
   useEffect(() => {
-    // Verhindere mehrfache Ausführung
-    if (actionData?.success && actionData?.tokens && !isNavigatingRef.current) {
-      isNavigatingRef.current = true;
-      
+    // Prüfe, ob die Antwort-Header Tokens enthalten
+    const refreshToken = document.querySelector('meta[name="x-supabase-refresh-token"]')?.getAttribute('content');
+    const accessToken = document.querySelector('meta[name="x-supabase-access-token"]')?.getAttribute('content');
+    
+    if (refreshToken && accessToken) {
       // Speichere Tokens im localStorage
-      localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
-      localStorage.setItem('sb-access-token', actionData.tokens.access_token);
+      localStorage.setItem('sb-refresh-token', refreshToken);
+      localStorage.setItem('sb-access-token', accessToken);
       
-      // Speichere Zeitstempel für Token-Erneuerung
-      localStorage.setItem('sb-token-timestamp', Date.now().toString());
-      
-      console.log("[Login] Tokens im localStorage gespeichert, navigiere zur Startseite");
-      
-      // Verwende Remix-Navigation statt window.location für bessere Performance
-      navigate("/", { replace: true });
+      // Navigiere zur Startseite
+      window.location.href = "/";
     }
-  }, [actionData, navigate]);
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen pt-20 p-4">

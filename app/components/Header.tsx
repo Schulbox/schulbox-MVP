@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, ShoppingCart } from "lucide-react";
+import { User, ShoppingCart, LogOut } from "lucide-react";
 import { LoginModal } from "~/components/LoginModal";
 
 type UserType = {
@@ -17,7 +17,7 @@ export default function Header({ user }: { user: UserType }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [hoveredIcon, setHoveredIcon] = useState<"login" | "cart" | null>(null);
+  const [hoveredIcon, setHoveredIcon] = useState<"login" | "cart" | "logout" | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -43,6 +43,38 @@ export default function Header({ user }: { user: UserType }) {
       document.removeEventListener("keydown", handleEsc);
     };
   }, []);
+
+  // Logout-Funktion
+  const handleLogout = async () => {
+    try {
+      console.log("Logout gestartet...");
+      
+      // Lösche Tokens aus localStorage
+      localStorage.removeItem('sb-refresh-token');
+      localStorage.removeItem('sb-access-token');
+      localStorage.removeItem('user-profile-cache');
+      localStorage.removeItem('user-profile-cache-time');
+      
+      console.log("Tokens aus localStorage gelöscht");
+      
+      // Sende Anfrage zum Löschen des Session-Markers
+      await fetch("/api/logout", { 
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      console.log("Logout-Anfrage gesendet");
+      
+      // Lade die Seite neu zur Login-Seite
+      navigate("/login");
+    } catch (error) {
+      console.error("Fehler beim Logout:", error);
+      // Auch bei Fehler zur Login-Seite navigieren
+      navigate("/login");
+    }
+  };
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
@@ -158,6 +190,39 @@ export default function Header({ user }: { user: UserType }) {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Logout Icon für eingeloggte Nutzer */}
+          {user && (
+            <div
+              className="relative group"
+              onMouseEnter={() => setHoveredIcon("logout")}
+              onMouseLeave={() => setHoveredIcon(null)}
+            >
+              <motion.div
+                onClick={handleLogout}
+                initial={{ color: "#6B7280" }}
+                whileHover={{ scale: 1.2, color: "#EF4444" }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="cursor-pointer"
+              >
+                <LogOut className="h-6 w-6" />
+              </motion.div>
+              <AnimatePresence>
+                {hoveredIcon === "logout" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
+                  >
+                    Abmelden
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Hallo Box für eingeloggte Nutzer */}
           {user && (
