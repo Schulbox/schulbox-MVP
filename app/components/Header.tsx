@@ -66,13 +66,16 @@ export default function Header({ user }: { user: User }) {
           <Link to="/webshop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
-          <motion.div
-  animate={{ rotate: 360 }}
-  transition={{ repeat: Infinity, duration: 10 }}
-  className="text-xl"
+
+          <motion.span
+  role="img"
+  aria-label="Login"
+  className="text-2xl cursor-pointer"
+  whileHover={{ scale: 2 }}
+  whileTap={{ scale: 0.8 }}
 >
-  🌟 Test
-</motion.div>
+  👤
+</motion.span>
 
         </nav>
 

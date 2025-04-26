@@ -60,7 +60,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
       return json({ user: null, ENV: env() });
     }
 
-    const newCookie = await setSupabaseSessionCookie(
+    const cookieHeader = await setSupabaseSessionCookie(
       request,
       data.session.refresh_token,
       data.session.access_token
@@ -102,7 +102,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
           },
           ENV: env(),
         }, {
-          headers: { "Set-Cookie": newCookie }
+          headers: { "Set-Cookie": cookieHeader }
         });
       }
 
@@ -114,7 +114,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
         },
         ENV: env(),
       }, {
-        headers: { "Set-Cookie": newCookie }
+        headers: { "Set-Cookie": cookieHeader }
       });
     }
 
@@ -129,7 +129,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
       },
       ENV: env(),
     }, {
-      headers: { "Set-Cookie": newCookie }
+      headers: { "Set-Cookie": cookieHeader }
     });
 
   } catch (error) {

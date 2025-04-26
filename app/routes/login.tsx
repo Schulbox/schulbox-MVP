@@ -28,16 +28,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       session_token_length: data.session.refresh_token?.length || 0
     });
     
-    const cookie = await setSupabaseSessionCookie(
+    const cookieHeader = await setSupabaseSessionCookie(
       request, 
       data.session.refresh_token,
       data.session.access_token
     );
 
-    // 👉 hier: Redirect mit URL-Parameter
+    // 👉 hier: Redirect mit URL-Parameter und mehreren Cookies
     return redirect("/?refreshed=1", {
       headers: {
-        "Set-Cookie": cookie,
+        "Set-Cookie": cookieHeader,
       },
     });
   } catch (err) {
