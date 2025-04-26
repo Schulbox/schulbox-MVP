@@ -1,4 +1,4 @@
-// Vereinfachte Login-Komponente für direkten Cookie-Ansatz
+// localStorage-only Login-Komponente
 import { useEffect, useState } from "react";
 import { Form, useActionData, useNavigate, Link } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
@@ -56,7 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
     session_token_length: data.session.refresh_token.length,
   });
 
-  // Setze Session-Cookie mit vereinfachtem Ansatz
+  // Setze Session-Cookie (leerer String im localStorage-only Ansatz)
   const cookie = await setSupabaseSessionCookie(
     request,
     data.session.refresh_token,
@@ -74,7 +74,8 @@ export async function action({ request }: ActionFunctionArgs) {
     },
     {
       headers: {
-        "Set-Cookie": cookie
+        // Leerer Cookie-Header im localStorage-only Ansatz
+        ...(cookie ? { "Set-Cookie": cookie } : {})
       }
     }
   );
@@ -95,6 +96,9 @@ export default function Login() {
         localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
         localStorage.setItem('sb-access-token', actionData.tokens.access_token);
         localStorage.setItem('sb-auth-timestamp', Date.now().toString());
+        
+        // Speichere zusätzlich einen Login-Status-Flag
+        localStorage.setItem('sb-is-logged-in', 'true');
         
         console.log("[Login] Tokens erfolgreich im localStorage gespeichert");
         

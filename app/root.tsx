@@ -1,264 +1,159 @@
-// Verbesserte Version der Root-Komponente mit robusterer Benutzerprofilabfrage
+// localStorage-only Root-Komponente
+import { useEffect, useState, useCallback } from "react";
 import {
   Links,
+  LiveReload,
+  Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
   useLoaderData,
-  useRouteError,
+  useRevalidator,
 } from "@remix-run/react";
-import { useEffect, useState, useCallback } from "react";
-import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { createServerClient } from "@supabase/auth-helpers-remix";
+import { createClient } from "@supabase/supabase-js";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
 import Header from "~/components/Header";
-import AuthErrorBoundary from "~/components/AuthErrorBoundary";
-import "./tailwind.css";
-import { createBrowserClient } from "@supabase/auth-helpers-remix";
 
-export type User = {
+// Typ für den Benutzer
+type User = {
+  email?: string;
+  role?: string;
   vorname?: string;
   nachname?: string;
-  role?: string;
-  email?: string;
 } | null;
 
-export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&display=swap",
-  },
-];
+export async function loader({ request }: LoaderFunctionArgs) {
+  // Erstelle Supabase-Client
+  const response = new Response();
+  const supabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    { request, response }
+  );
 
-function env() {
-  return {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  };
-}
-
-export async function loader(ctx: LoaderFunctionArgs) {
-  const { request } = ctx;
-  const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
-
-  // Wenn kein Session-Marker gefunden wurde, ist der Benutzer nicht eingeloggt
-  if (!refresh_token || !access_token) {
-    console.log("[root.loader] Keine Session gefunden, User ist nicht eingeloggt");
-    return json({ user: null, ENV: env(), isLoggedIn: false });
-  }
-
-  // Hier wird nur geprüft, ob der Session-Marker vorhanden ist
-  // Die eigentlichen Tokens werden clientseitig aus localStorage geholt
-  console.log("[root.loader] Session-Marker gefunden, User ist eingeloggt");
+  // Prüfe, ob der Benutzer eingeloggt ist (im localStorage-only Ansatz immer false)
+  // Die eigentliche Authentifizierung erfolgt client-seitig
+  const isLoggedIn = false;
   
-  // Wir geben nur die ENV-Variablen zurück, der Rest wird clientseitig gehandhabt
-  return json({ 
-    user: null, // Wird clientseitig gefüllt
-    ENV: env(),
-    isLoggedIn: true
-  });
-}
+  console.log("[root.loader] localStorage-only Ansatz: Server-seitig immer nicht eingeloggt");
 
-export function ErrorBoundary() {
-  const error = useRouteError();
-  console.error("[ErrorBoundary] App-Fehler:", error);
-
-  return (
-    <html lang="de">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Fehler - Schulbox</title>
-        <Links />
-      </head>
-      <body className="bg-white text-gray-900 font-sans">
-        <Header user={null} />
-        <main className="p-6 max-w-4xl mx-auto">
-          <AuthErrorBoundary error={error instanceof Error ? error : undefined}>
-            <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
-              <h1 className="text-2xl font-bold text-red-700 mb-4">Ein Fehler ist aufgetreten</h1>
-              <p className="mb-4">
-                Es tut uns leid, aber bei der Verarbeitung Ihrer Anfrage ist ein Fehler aufgetreten.
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Seite neu laden
-              </button>
-            </div>
-          </AuthErrorBoundary>
-        </main>
-        <ScrollRestoration />
-        <Scripts />
-      </body>
-    </html>
+  return json(
+    {
+      ENV: {
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+      },
+      isLoggedIn,
+    },
+    {
+      headers: response.headers,
+    }
   );
 }
 
+
+
 export default function App() {
-  const { ENV, isLoggedIn } = useLoaderData<typeof loader>();
+  const { ENV, isLoggedIn: serverIsLoggedIn } = useLoaderData<typeof loader>();
   const [user, setUser] = useState<User>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const revalidator = useRevalidator();
 
-  // Verbesserte Funktion zum Speichern von Tokens im localStorage
-  const saveTokensToLocalStorage = useCallback((refresh_token: string, access_token: string) => {
+  // Initialisiere Supabase-Client
+  const initializeSupabase = useCallback(() => {
     try {
-      localStorage.setItem('sb-refresh-token', refresh_token);
-      localStorage.setItem('sb-access-token', access_token);
-      localStorage.setItem('sb-auth-timestamp', Date.now().toString());
-      console.log("[App] Tokens erfolgreich im localStorage gespeichert");
-      return true;
-    } catch (error) {
-      console.error("[App] Fehler beim Speichern der Tokens im localStorage:", error);
-      return false;
-    }
-  }, []);
+      // Prüfe, ob localStorage verfügbar ist
+      if (typeof window === 'undefined' || !window.localStorage) {
+        console.log("[App] localStorage nicht verfügbar");
+        return null;
+      }
 
-  // Verbesserte Funktion zum Laden von Tokens aus localStorage
-  const loadTokensFromLocalStorage = useCallback(() => {
-    try {
-      const refresh_token = localStorage.getItem('sb-refresh-token');
-      const access_token = localStorage.getItem('sb-access-token');
-      const timestamp = localStorage.getItem('sb-auth-timestamp');
-      
-      if (!refresh_token || !access_token) {
+      // Prüfe, ob der Benutzer eingeloggt ist (localStorage-Flag)
+      const isLoggedInFlag = localStorage.getItem('sb-is-logged-in');
+      if (isLoggedInFlag !== 'true') {
+        console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
+        return null;
+      }
+
+      // Hole Tokens aus localStorage
+      const refreshToken = localStorage.getItem('sb-refresh-token');
+      const accessToken = localStorage.getItem('sb-access-token');
+
+      if (!refreshToken || !accessToken) {
         console.log("[App] Keine Tokens im localStorage gefunden");
         return null;
       }
-      
-      console.log("[App] Tokens aus localStorage geladen, gespeichert am:", timestamp);
-      return { refresh_token, access_token };
+
+      console.log("[App] Tokens aus localStorage geladen");
+
+      // Erstelle Supabase-Client mit den Tokens
+      const supabase = createClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      });
+
+      // Setze die Session
+      supabase.auth.setSession({
+        refresh_token: refreshToken,
+        access_token: accessToken,
+      });
+
+      return supabase;
     } catch (error) {
-      console.error("[App] Fehler beim Laden der Tokens aus localStorage:", error);
+      console.error("[App] Fehler beim Initialisieren von Supabase:", error);
       return null;
     }
-  }, []);
+  }, [ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY]);
 
-  // Effekt zum Laden der Tokens aus localStorage und Abrufen der Benutzerdaten
-  useEffect(() => {
-    // Prüfe, ob wir im Browser sind
-    if (typeof window === 'undefined') {
-      return; // Nicht im Browser, beende frühzeitig
-    }
-    
-    const initializeAuth = async () => {
-      try {
-        // Wenn der Server sagt, dass wir nicht eingeloggt sind, aber wir haben Tokens im localStorage,
-        // versuchen wir trotzdem, die Tokens zu verwenden
-        const tokens = loadTokensFromLocalStorage();
-        
-        if (!tokens && !isLoggedIn) {
-          console.log("[App] Nicht eingeloggt und keine Tokens im localStorage");
-          setIsInitialized(true);
-          return;
-        }
-        
-        if (!tokens && isLoggedIn) {
-          console.log("[App] Server sagt eingeloggt, aber keine Tokens im localStorage - inkonsistenter Zustand");
-          setIsInitialized(true);
-          return;
-        }
-        
-        // Ab hier haben wir Tokens
-        const { refresh_token, access_token } = tokens!;
-        
-        // Erstelle Supabase-Client mit den Tokens aus localStorage
-        const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-        
-        // Setze die Tokens im Supabase-Client
-        const { error: sessionError } = await supabase.auth.setSession({
-          refresh_token,
-          access_token
-        });
-        
-        if (sessionError) {
-          console.error("[App] Fehler beim Setzen der Session:", sessionError);
-          // Tokens sind möglicherweise ungültig, entferne sie
-          localStorage.removeItem('sb-refresh-token');
-          localStorage.removeItem('sb-access-token');
-          localStorage.removeItem('sb-auth-timestamp');
-          localStorage.removeItem('user-profile-cache');
-          localStorage.removeItem('user-profile-cache-time');
-          setIsInitialized(true);
-          return;
-        }
-        
-        // Hole Benutzerdaten
-        await fetchUserData(supabase);
-        setIsInitialized(true);
-        
-        // Auth-Zustandsänderungen überwachen
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange((event) => {
-          console.log("[App] Auth geändert:", event);
+  // Lade Benutzerdaten
+  const fetchUserData = useCallback(async (supabase: any) => {
+    try {
+      // Prüfe zuerst, ob Benutzerdaten im localStorage-Cache vorhanden sind
+      const cachedUserData = localStorage.getItem('user-profile-cache');
+      if (cachedUserData) {
+        try {
+          const userData = JSON.parse(cachedUserData);
+          const cacheTime = localStorage.getItem('user-profile-cache-time');
           
-          if (event === "SIGNED_OUT") {
-            // Lösche Tokens und Cache aus localStorage
-            localStorage.removeItem('sb-refresh-token');
-            localStorage.removeItem('sb-access-token');
-            localStorage.removeItem('sb-auth-timestamp');
-            localStorage.removeItem('user-profile-cache');
-            localStorage.removeItem('user-profile-cache-time');
-            setUser(null);
-          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-            // Aktualisiere Tokens im localStorage
-            supabase.auth.getSession().then(({ data }) => {
-              if (data.session) {
-                saveTokensToLocalStorage(
-                  data.session.refresh_token,
-                  data.session.access_token
-                );
-                fetchUserData(supabase);
-              }
-            });
+          // Verwende Cache, wenn er weniger als 5 Minuten alt ist
+          if (cacheTime && (Date.now() - parseInt(cacheTime)) < 5 * 60 * 1000) {
+            console.log("[App] Verwende gecachte Benutzerdaten:", userData);
+            return userData;
           }
-        });
-        
-        return () => subscription.unsubscribe();
-      } catch (error) {
-        console.error("[App] Fehler bei der Initialisierung:", error);
-        setIsInitialized(true);
+        } catch (e) {
+          console.error("[App] Fehler beim Parsen des Benutzer-Caches:", e);
+        }
       }
-    };
-    
-    // Funktion zum Abrufen der Benutzerdaten
-    const fetchUserData = async (supabase: any) => {
-      try {
-        // Prüfe zuerst, ob Benutzerdaten im localStorage-Cache vorhanden sind
-        const cachedUserData = localStorage.getItem('user-profile-cache');
-        if (cachedUserData) {
-          try {
-            const userData = JSON.parse(cachedUserData);
-            const cacheTime = localStorage.getItem('user-profile-cache-time');
-            
-            // Verwende Cache, wenn er weniger als 5 Minuten alt ist
-            if (cacheTime && (Date.now() - parseInt(cacheTime)) < 5 * 60 * 1000) {
-              console.log("[App] Verwende gecachte Benutzerdaten");
-              setUser(userData);
-              return;
-            }
-          } catch (e) {
-            console.error("[App] Fehler beim Parsen des Benutzer-Caches:", e);
-          }
-        }
 
-        // Hole Benutzer-ID
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error("[App] Fehler beim Abrufen des Benutzers:", authError);
-          return;
-        }
-        
-        if (!authData.user) {
-          console.error("[App] Kein Benutzer gefunden");
-          return;
-        }
-        
-        console.log("[App] Benutzer-ID:", authData.user.id);
+      // Hole Benutzer-ID
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error("[App] Fehler beim Abrufen des Benutzers:", authError);
+        return null;
+      }
+      
+      if (!authData.user) {
+        console.error("[App] Kein Benutzer gefunden");
+        return null;
+      }
+      
+      console.log("[App] Benutzer-ID:", authData.user.id);
+      
+      // Versuche zuerst, die RPC-Funktion zu verwenden
+      console.log("[App] Versuche RPC-Funktion 'get_benutzer_profil'...");
+      const { data: benutzerProfilRPC, error: rpcError } = await supabase
+        .rpc('get_benutzer_profil', { user_id_param: authData.user.id });
+      
+      if (rpcError) {
+        console.error("[App] RPC-Abfragefehler:", rpcError.message);
+        console.log("[App] Fallback: Direkter Zugriff auf die Benutzer-Tabelle...");
         
         // Direkter Zugriff auf die Benutzer-Tabelle als Fallback
         const { data: benutzerDaten, error: benutzerError } = await supabase
@@ -268,9 +163,10 @@ export default function App() {
           .single();
         
         if (benutzerError) {
-          console.error("[App] Fehler bei direkter Benutzerabfrage:", benutzerError);
+          console.error("[App] Fehler bei direkter Benutzerabfrage:", benutzerError.message);
           
           // Fallback: Erstelle ein neues Benutzerprofil direkt in der Tabelle
+          console.log("[App] Fallback: Erstelle neues Benutzerprofil...");
           const { data: neuerBenutzer, error: insertError } = await supabase
             .from('benutzer')
             .upsert({
@@ -283,9 +179,10 @@ export default function App() {
             .select();
           
           if (insertError) {
-            console.error("[App] Fehler beim Erstellen des Benutzerprofils:", insertError);
+            console.error("[App] Fehler beim Erstellen des Benutzerprofils:", insertError.message);
             
             // Letzter Fallback: Verwende nur die E-Mail-Adresse
+            console.log("[App] Letzter Fallback: Verwende nur E-Mail-Adresse");
             const fallbackData = {
               email: authData.user.email || "unbekannt",
               role: "lehrkraft",
@@ -294,11 +191,11 @@ export default function App() {
             localStorage.setItem('user-profile-cache', JSON.stringify(fallbackData));
             localStorage.setItem('user-profile-cache-time', Date.now().toString());
             
-            setUser(fallbackData);
-            return;
+            return fallbackData;
           }
           
           if (neuerBenutzer && neuerBenutzer.length > 0) {
+            console.log("[App] Neues Benutzerprofil erstellt:", neuerBenutzer[0]);
             const userData = {
               email: authData.user.email,
               role: neuerBenutzer[0].role,
@@ -309,13 +206,14 @@ export default function App() {
             localStorage.setItem('user-profile-cache', JSON.stringify(userData));
             localStorage.setItem('user-profile-cache-time', Date.now().toString());
             
-            setUser(userData);
+            return userData;
           }
           
-          return;
+          return null;
         }
         
         // Wenn wir hier sind, haben wir erfolgreich Benutzerdaten abgerufen
+        console.log("[App] Benutzerdaten erfolgreich abgerufen:", benutzerDaten);
         const userData = {
           email: authData.user.email,
           role: benutzerDaten.role,
@@ -327,36 +225,219 @@ export default function App() {
         localStorage.setItem('user-profile-cache', JSON.stringify(userData));
         localStorage.setItem('user-profile-cache-time', Date.now().toString());
         
+        return userData;
+      }
+      
+      // RPC-Funktion hat funktioniert
+      if (benutzerProfilRPC && benutzerProfilRPC.length > 0) {
+        console.log("[App] RPC-Abfrage erfolgreich:", benutzerProfilRPC[0]);
+        const userData = {
+          email: authData.user.email,
+          role: benutzerProfilRPC[0].role,
+          vorname: benutzerProfilRPC[0].vorname,
+          nachname: benutzerProfilRPC[0].nachname,
+        };
+        
+        // Cache die Benutzerdaten
+        localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+        localStorage.setItem('user-profile-cache-time', Date.now().toString());
+        
+        return userData;
+      }
+      
+      // Kein Profil gefunden, erstelle ein neues
+      console.log("[App] Kein Profil gefunden, erstelle ein neues Profil");
+      
+      // Versuche zuerst die RPC-Funktion
+      console.log("[App] Versuche RPC-Funktion 'upsert_benutzer_profil'...");
+      const { data: neuesBenutzerProfil, error: upsertError } = await supabase
+        .rpc('upsert_benutzer_profil', {
+          user_id_param: authData.user.id,
+          email_param: authData.user.email,
+          role_param: 'lehrkraft',
+        });
+      
+      if (upsertError) {
+        console.error("[App] Fehler bei RPC-Profilerstellung:", upsertError.message);
+        
+        // Fallback: Direkter Zugriff auf die Tabelle
+        console.log("[App] Fallback: Direkter Zugriff auf die Tabelle für Profilerstellung...");
+        const { data: neuerBenutzer, error: insertError } = await supabase
+          .from('benutzer')
+          .upsert({
+            user_id: authData.user.id,
+            vorname: '',
+            nachname: '',
+            role: 'lehrkraft'
+          })
+          .select();
+        
+        if (insertError) {
+          console.error("[App] Fehler beim Erstellen des Benutzerprofils:", insertError.message);
+          
+          // Letzter Fallback: Verwende nur die E-Mail-Adresse
+          console.log("[App] Letzter Fallback: Verwende nur E-Mail-Adresse");
+          const fallbackData = {
+            email: authData.user.email || "unbekannt",
+            role: "lehrkraft",
+          };
+          
+          localStorage.setItem('user-profile-cache', JSON.stringify(fallbackData));
+          localStorage.setItem('user-profile-cache-time', Date.now().toString());
+          
+          return fallbackData;
+        }
+        
+        if (neuerBenutzer && neuerBenutzer.length > 0) {
+          console.log("[App] Neues Benutzerprofil erstellt:", neuerBenutzer[0]);
+          const userData = {
+            email: authData.user.email,
+            role: neuerBenutzer[0].role,
+            vorname: neuerBenutzer[0].vorname,
+            nachname: neuerBenutzer[0].nachname,
+          };
+          
+          localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+          localStorage.setItem('user-profile-cache-time', Date.now().toString());
+          
+          return userData;
+        }
+        
+        return null;
+      }
+      
+      if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
+        console.log("[App] Neues Benutzerprofil erstellt (RPC):", neuesBenutzerProfil[0]);
+        const userData = {
+          email: authData.user.email,
+          role: neuesBenutzerProfil[0].role,
+          vorname: neuesBenutzerProfil[0].vorname,
+          nachname: neuesBenutzerProfil[0].nachname,
+        };
+        
+        // Cache die Benutzerdaten
+        localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+        localStorage.setItem('user-profile-cache-time', Date.now().toString());
+        
+        return userData;
+      }
+      
+      // Fallback wenn Profilerstellung fehlschlägt
+      console.log("[App] Fallback: Verwende nur E-Mail-Adresse");
+      const fallbackData = {
+        email: authData.user.email || "unbekannt",
+        role: "lehrkraft",
+      };
+      
+      localStorage.setItem('user-profile-cache', JSON.stringify(fallbackData));
+      localStorage.setItem('user-profile-cache-time', Date.now().toString());
+      
+      return fallbackData;
+    } catch (error) {
+      console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
+      return null;
+    }
+  }, []);
+
+  // Initialisiere Authentifizierung
+  useEffect(() => {
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Prüfe, ob localStorage verfügbar ist
+        if (typeof window === 'undefined' || !window.localStorage) {
+          console.log("[App] localStorage nicht verfügbar");
+          setIsLoggedIn(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Prüfe, ob der Benutzer eingeloggt ist (localStorage-Flag)
+        const isLoggedInFlag = localStorage.getItem('sb-is-logged-in');
+        if (isLoggedInFlag !== 'true') {
+          console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
+          setIsLoggedIn(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
+        
+        // Initialisiere Supabase
+        const supabase = initializeSupabase();
+        if (!supabase) {
+          console.log("[App] Supabase konnte nicht initialisiert werden");
+          setIsLoggedIn(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Lade Benutzerdaten
+        const userData = await fetchUserData(supabase);
+        if (!userData) {
+          console.log("[App] Keine Benutzerdaten gefunden");
+          setIsLoggedIn(true); // Trotzdem eingeloggt, nur ohne Profildaten
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log("[App] Benutzerdaten geladen:", userData);
+        setIsLoggedIn(true);
         setUser(userData);
       } catch (error) {
-        console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
+        console.error("[App] Fehler bei der Authentifizierung:", error);
+        setIsLoggedIn(false);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
+
     initializeAuth();
-  }, [ENV, isLoggedIn, loadTokensFromLocalStorage, saveTokensToLocalStorage]);
+  }, [initializeSupabase, fetchUserData]);
+
+  // Überwache Änderungen am localStorage
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'sb-is-logged-in') {
+        console.log("[App] localStorage-Änderung erkannt:", event.key, event.newValue);
+        
+        if (event.newValue === 'true') {
+          // Benutzer hat sich eingeloggt
+          revalidator.revalidate();
+        } else if (event.newValue === null || event.newValue !== 'true') {
+          // Benutzer hat sich ausgeloggt
+          setIsLoggedIn(false);
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [revalidator]);
 
   return (
     <html lang="de">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Schulbox</title>
+        <Meta />
         <Links />
       </head>
-      <body className="bg-white text-gray-900 font-sans">
-        <Header user={user} />
-        <main>
-          {isInitialized ? (
-            <Outlet />
-          ) : (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          )}
-        </main>
+      <body>
+        <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
+        <Outlet context={{ user, isLoggedIn, isLoading }} />
         <ScrollRestoration />
         <Scripts />
+        <LiveReload />
       </body>
     </html>
   );
