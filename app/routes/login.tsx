@@ -34,7 +34,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       data.session.access_token
     );
 
-    // 👉 hier: Redirect mit URL-Parameter und mehreren Cookies
+    // 👉 hier: Redirect mit URL-Parameter und korrektem Cookie-Header
     return redirect("/?refreshed=1", {
       headers: {
         "Set-Cookie": cookieHeader,

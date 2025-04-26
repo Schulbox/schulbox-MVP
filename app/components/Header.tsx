@@ -3,15 +3,16 @@ import { Link } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { User, ShoppingCart } from "lucide-react";
 
-type User = {
+type UserType = {
   vorname?: string;
   nachname?: string;
   role?: string;
   email?: string;
 } | null;
 
-export default function Header({ user }: { user: User }) {
+export default function Header({ user }: { user: UserType }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [hoveredIcon, setHoveredIcon] = useState<"login" | "cart" | null>(null);
@@ -135,17 +136,15 @@ export default function Header({ user }: { user: User }) {
                 onMouseLeave={() => setHoveredIcon(null)}
               >
                 <Link to="/login" title="Einloggen">
-                  <motion.span
-                    role="img"
-                    aria-label="Login"
+                  <motion.div
                     initial={{ color: "#6B7280" }}
                     whileHover={{ scale: 1.2, color: "#3B82F6" }}
                     whileTap={{ scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 300 }}
-                    className="text-2xl cursor-pointer"
+                    className="cursor-pointer"
                   >
-                    👤
-                  </motion.span>
+                    <User className="h-6 w-6" />
+                  </motion.div>
                 </Link>
                 <AnimatePresence>
                   {hoveredIcon === "login" && (
@@ -169,17 +168,15 @@ export default function Header({ user }: { user: User }) {
                 onMouseLeave={() => setHoveredIcon(null)}
               >
                 <Link to="/cart" title="Warenkorb">
-                  <motion.span
-                    role="img"
-                    aria-label="Warenkorb"
+                  <motion.div
                     initial={{ color: "#6B7280" }}
                     whileHover={{ scale: 1.2, color: "#3B82F6" }}
                     whileTap={{ scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 300 }}
-                    className="text-2xl cursor-pointer"
+                    className="cursor-pointer"
                   >
-                    🛒
-                  </motion.span>
+                    <ShoppingCart className="h-6 w-6" />
+                  </motion.div>
                 </Link>
                 <AnimatePresence>
                   {hoveredIcon === "cart" && (
@@ -208,8 +205,7 @@ export default function Header({ user }: { user: User }) {
         </div>
       </div>
 
-      {/* Mobile Menü */}
-      {/* (Hier bleibt dein mobiles Menü unverändert) */}
+      {/* Mobile Menü bleibt unverändert */}
     </header>
   );
 }
