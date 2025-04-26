@@ -30,15 +30,18 @@ export async function setSupabaseSessionCookie(
   refresh_token: string,
   access_token: string
 ): Promise<string> {
-  // Erstelle ein einfaches Cookie mit dem Session-Marker
   const cookieValue = "true";
   const expires = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
   
+  // Explizit die Domain setzen (passen Sie dies an Ihre Domain an)
+  const domain = ".schulbox.at"; // Beachten Sie den führenden Punkt für Subdomains
+  
   console.log("[setSupabaseSessionCookie] Setze einfaches Session-Cookie:", cookieValue);
   
-  // Gib das Cookie direkt zurück
-  return `${SESSION_COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
+  // Gib das Cookie mit expliziter Domain zurück
+  return `${SESSION_COOKIE_NAME}=${cookieValue}; Path=/; Domain=${domain}; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
 }
+
 
 /**
  * Prüft, ob das Session-Cookie vorhanden ist
