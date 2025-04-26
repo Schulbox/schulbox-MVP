@@ -66,6 +66,14 @@ export default function Header({ user }: { user: User }) {
           <Link to="/webshop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
+          <motion.div
+  animate={{ rotate: 360 }}
+  transition={{ repeat: Infinity, duration: 10 }}
+  className="text-xl"
+>
+  🌟 Test
+</motion.div>
+
         </nav>
 
         {/* Suche Desktop */}
