@@ -66,17 +66,6 @@ export default function Header({ user }: { user: User }) {
           <Link to="/webshop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
-
-          <motion.span
-  role="img"
-  aria-label="Login"
-  className="text-2xl cursor-pointer"
-  whileHover={{ scale: 2 }}
-  whileTap={{ scale: 0.8 }}
->
-  👤
-</motion.span>
-
         </nav>
 
         {/* Suche Desktop */}
@@ -149,9 +138,11 @@ export default function Header({ user }: { user: User }) {
                   <motion.span
                     role="img"
                     aria-label="Login"
-                    className="text-xl cursor-pointer text-gray-600"
+                    initial={{ color: "#6B7280" }}
                     whileHover={{ scale: 1.2, color: "#3B82F6" }}
                     whileTap={{ scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="text-2xl cursor-pointer"
                   >
                     👤
                   </motion.span>
@@ -170,40 +161,42 @@ export default function Header({ user }: { user: User }) {
                   )}
                 </AnimatePresence>
               </div>
+
+              {/* Warenkorb Icon */}
+              <div
+                className="relative group"
+                onMouseEnter={() => setHoveredIcon("cart")}
+                onMouseLeave={() => setHoveredIcon(null)}
+              >
+                <Link to="/cart" title="Warenkorb">
+                  <motion.span
+                    role="img"
+                    aria-label="Warenkorb"
+                    initial={{ color: "#6B7280" }}
+                    whileHover={{ scale: 1.2, color: "#3B82F6" }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="text-2xl cursor-pointer"
+                  >
+                    🛒
+                  </motion.span>
+                </Link>
+                <AnimatePresence>
+                  {hoveredIcon === "cart" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
+                    >
+                      Warenkorb
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           )}
-
-          {/* Warenkorb Icon */}
-          <div
-            className="relative group"
-            onMouseEnter={() => setHoveredIcon("cart")}
-            onMouseLeave={() => setHoveredIcon(null)}
-          >
-            <Link to="/cart" title="Warenkorb">
-              <motion.span
-                role="img"
-                aria-label="Warenkorb"
-                className="text-xl cursor-pointer"
-                whileHover={{ scale: 1.2, color: "#3B82F6" }}
-                whileTap={{ scale: 0.9 }}
-              >
-                🛒
-              </motion.span>
-            </Link>
-            <AnimatePresence>
-              {hoveredIcon === "cart" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.3 }}
-                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
-                >
-                  Warenkorb
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
           {/* Hamburger Mobil */}
           <button
@@ -216,7 +209,7 @@ export default function Header({ user }: { user: User }) {
       </div>
 
       {/* Mobile Menü */}
-      {/* (belassen wir wie gehabt) */}
+      {/* (Hier bleibt dein mobiles Menü unverändert) */}
     </header>
   );
 }
