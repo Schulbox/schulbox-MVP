@@ -16,6 +16,8 @@ import { createServerClient } from "@supabase/auth-helpers-remix";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
 import Header from "~/components/Header";
+import "~/styles/tailwind.css"; // oder dein korrekter Pfad
+
 
 // Typ für den Benutzer
 type User = {
