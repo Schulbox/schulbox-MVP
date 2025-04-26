@@ -1,4 +1,4 @@
-// app/root.tsx - Vereinfachte Version
+// Verbesserte Version der Root-Komponente mit robusterer Benutzerprofilabfrage
 import {
   Links,
   Outlet,
@@ -7,7 +7,7 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
@@ -46,7 +46,7 @@ export async function loader(ctx: LoaderFunctionArgs) {
   // Wenn kein Session-Marker gefunden wurde, ist der Benutzer nicht eingeloggt
   if (!refresh_token || !access_token) {
     console.log("[root.loader] Keine Session gefunden, User ist nicht eingeloggt");
-    return json({ user: null, ENV: env() });
+    return json({ user: null, ENV: env(), isLoggedIn: false });
   }
 
   // Hier wird nur geprüft, ob der Session-Marker vorhanden ist
@@ -56,7 +56,8 @@ export async function loader(ctx: LoaderFunctionArgs) {
   // Wir geben nur die ENV-Variablen zurück, der Rest wird clientseitig gehandhabt
   return json({ 
     user: null, // Wird clientseitig gefüllt
-    ENV: env() 
+    ENV: env(),
+    isLoggedIn: true
   });
 }
 
@@ -98,35 +99,160 @@ export function ErrorBoundary() {
 }
 
 export default function App() {
-  const { ENV } = useLoaderData<typeof loader>();
+  const { ENV, isLoggedIn } = useLoaderData<typeof loader>();
   const [user, setUser] = useState<User>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Verbesserte Funktion zum Speichern von Tokens im localStorage
+  const saveTokensToLocalStorage = useCallback((refresh_token: string, access_token: string) => {
+    try {
+      localStorage.setItem('sb-refresh-token', refresh_token);
+      localStorage.setItem('sb-access-token', access_token);
+      localStorage.setItem('sb-auth-timestamp', Date.now().toString());
+      console.log("[App] Tokens erfolgreich im localStorage gespeichert");
+      return true;
+    } catch (error) {
+      console.error("[App] Fehler beim Speichern der Tokens im localStorage:", error);
+      return false;
+    }
+  }, []);
+
+  // Verbesserte Funktion zum Laden von Tokens aus localStorage
+  const loadTokensFromLocalStorage = useCallback(() => {
+    try {
+      const refresh_token = localStorage.getItem('sb-refresh-token');
+      const access_token = localStorage.getItem('sb-access-token');
+      const timestamp = localStorage.getItem('sb-auth-timestamp');
+      
+      if (!refresh_token || !access_token) {
+        console.log("[App] Keine Tokens im localStorage gefunden");
+        return null;
+      }
+      
+      console.log("[App] Tokens aus localStorage geladen, gespeichert am:", timestamp);
+      return { refresh_token, access_token };
+    } catch (error) {
+      console.error("[App] Fehler beim Laden der Tokens aus localStorage:", error);
+      return null;
+    }
+  }, []);
+
+  // Effekt zum Laden der Tokens aus localStorage und Abrufen der Benutzerdaten
   useEffect(() => {
-    // Hole Tokens aus localStorage
-    const refresh_token = localStorage.getItem('sb-refresh-token');
-    const access_token = localStorage.getItem('sb-access-token');
-    
-    if (!refresh_token || !access_token) {
-      console.log("[App] Keine Tokens im localStorage gefunden");
-      return;
+    // Prüfe, ob wir im Browser sind
+    if (typeof window === 'undefined') {
+      return; // Nicht im Browser, beende frühzeitig
     }
     
-    console.log("[App] Tokens aus localStorage geladen");
-    
-    // Erstelle Supabase-Client mit den Tokens aus localStorage
-    const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
-    
-    // Setze die Tokens im Supabase-Client
-    supabase.auth.setSession({
-      refresh_token,
-      access_token
-    });
-    
-    // Hole Benutzerdaten
-    const fetchUserData = async () => {
+    const initializeAuth = async () => {
       try {
+        // Wenn der Server sagt, dass wir nicht eingeloggt sind, aber wir haben Tokens im localStorage,
+        // versuchen wir trotzdem, die Tokens zu verwenden
+        const tokens = loadTokensFromLocalStorage();
+        
+        if (!tokens && !isLoggedIn) {
+          console.log("[App] Nicht eingeloggt und keine Tokens im localStorage");
+          setIsInitialized(true);
+          return;
+        }
+        
+        if (!tokens && isLoggedIn) {
+          console.log("[App] Server sagt eingeloggt, aber keine Tokens im localStorage - inkonsistenter Zustand");
+          setIsInitialized(true);
+          return;
+        }
+        
+        // Ab hier haben wir Tokens
+        const { refresh_token, access_token } = tokens!;
+        
+        // Erstelle Supabase-Client mit den Tokens aus localStorage
+        const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+        
+        // Setze die Tokens im Supabase-Client
+        const { error: sessionError } = await supabase.auth.setSession({
+          refresh_token,
+          access_token
+        });
+        
+        if (sessionError) {
+          console.error("[App] Fehler beim Setzen der Session:", sessionError);
+          // Tokens sind möglicherweise ungültig, entferne sie
+          localStorage.removeItem('sb-refresh-token');
+          localStorage.removeItem('sb-access-token');
+          localStorage.removeItem('sb-auth-timestamp');
+          localStorage.removeItem('user-profile-cache');
+          localStorage.removeItem('user-profile-cache-time');
+          setIsInitialized(true);
+          return;
+        }
+        
+        // Hole Benutzerdaten
+        await fetchUserData(supabase);
+        setIsInitialized(true);
+        
+        // Auth-Zustandsänderungen überwachen
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event) => {
+          console.log("[App] Auth geändert:", event);
+          
+          if (event === "SIGNED_OUT") {
+            // Lösche Tokens und Cache aus localStorage
+            localStorage.removeItem('sb-refresh-token');
+            localStorage.removeItem('sb-access-token');
+            localStorage.removeItem('sb-auth-timestamp');
+            localStorage.removeItem('user-profile-cache');
+            localStorage.removeItem('user-profile-cache-time');
+            setUser(null);
+          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            // Aktualisiere Tokens im localStorage
+            supabase.auth.getSession().then(({ data }) => {
+              if (data.session) {
+                saveTokensToLocalStorage(
+                  data.session.refresh_token,
+                  data.session.access_token
+                );
+                fetchUserData(supabase);
+              }
+            });
+          }
+        });
+        
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error("[App] Fehler bei der Initialisierung:", error);
+        setIsInitialized(true);
+      }
+    };
+    
+    // Funktion zum Abrufen der Benutzerdaten
+    const fetchUserData = async (supabase: any) => {
+      try {
+        // Prüfe zuerst, ob Benutzerdaten im localStorage-Cache vorhanden sind
+        const cachedUserData = localStorage.getItem('user-profile-cache');
+        if (cachedUserData) {
+          try {
+            const userData = JSON.parse(cachedUserData);
+            const cacheTime = localStorage.getItem('user-profile-cache-time');
+            
+            // Verwende Cache, wenn er weniger als 5 Minuten alt ist
+            if (cacheTime && (Date.now() - parseInt(cacheTime)) < 5 * 60 * 1000) {
+              console.log("[App] Verwende gecachte Benutzerdaten");
+              setUser(userData);
+              return;
+            }
+          } catch (e) {
+            console.error("[App] Fehler beim Parsen des Benutzer-Caches:", e);
+          }
+        }
+
         // Hole Benutzer-ID
-        const { data: authData } = await supabase.auth.getUser();
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("[App] Fehler beim Abrufen des Benutzers:", authError);
+          return;
+        }
+        
         if (!authData.user) {
           console.error("[App] Kein Benutzer gefunden");
           return;
@@ -134,83 +260,81 @@ export default function App() {
         
         console.log("[App] Benutzer-ID:", authData.user.id);
         
-        // Hole Benutzerprofil mit RPC
-        const { data: benutzerProfilRPC, error: rpcError } = await supabase
-          .rpc('get_benutzer_profil', { user_id_param: authData.user.id });
+        // Direkter Zugriff auf die Benutzer-Tabelle als Fallback
+        const { data: benutzerDaten, error: benutzerError } = await supabase
+          .from('benutzer')
+          .select('vorname, nachname, role')
+          .eq('user_id', authData.user.id)
+          .single();
         
-        console.log("[App] RPC-Abfrageergebnis:", benutzerProfilRPC);
-        
-        if (rpcError) {
-          console.error("[App] RPC-Abfragefehler:", rpcError);
-          return;
-        }
-        
-        if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
-          console.log("[App] Kein Profil gefunden, erstelle ein neues Profil");
+        if (benutzerError) {
+          console.error("[App] Fehler bei direkter Benutzerabfrage:", benutzerError);
           
-          const { data: neuesBenutzerProfil, error: upsertError } = await supabase
-            .rpc('upsert_benutzer_profil', {
-              user_id_param: authData.user.id,
-              email_param: authData.user.email,
-              role_param: 'lehrkraft',
-            });
+          // Fallback: Erstelle ein neues Benutzerprofil direkt in der Tabelle
+          const { data: neuerBenutzer, error: insertError } = await supabase
+            .from('benutzer')
+            .upsert({
+              user_id: authData.user.id,
+              vorname: '',
+              nachname: '',
+              role: 'lehrkraft',
+              email: authData.user.email
+            })
+            .select();
           
-          console.log("[App] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
-          
-          if (upsertError) {
-            console.error("[App] Fehler bei Profilerstellung:", upsertError);
+          if (insertError) {
+            console.error("[App] Fehler beim Erstellen des Benutzerprofils:", insertError);
+            
+            // Letzter Fallback: Verwende nur die E-Mail-Adresse
+            const fallbackData = {
+              email: authData.user.email || "unbekannt",
+              role: "lehrkraft",
+            };
+            
+            localStorage.setItem('user-profile-cache', JSON.stringify(fallbackData));
+            localStorage.setItem('user-profile-cache-time', Date.now().toString());
+            
+            setUser(fallbackData);
             return;
           }
           
-          if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
-            setUser({
+          if (neuerBenutzer && neuerBenutzer.length > 0) {
+            const userData = {
               email: authData.user.email,
-              role: neuesBenutzerProfil[0].role,
-              vorname: neuesBenutzerProfil[0].vorname,
-              nachname: neuesBenutzerProfil[0].nachname,
-            });
-            return;
+              role: neuerBenutzer[0].role,
+              vorname: neuerBenutzer[0].vorname,
+              nachname: neuerBenutzer[0].nachname,
+            };
+            
+            localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+            localStorage.setItem('user-profile-cache-time', Date.now().toString());
+            
+            setUser(userData);
           }
           
-          // Fallback wenn Profilerstellung fehlschlägt
-          setUser({
-            email: authData.user.email || "unbekannt",
-            role: "lehrkraft",
-          });
           return;
         }
         
-        const benutzerProfil = benutzerProfilRPC[0];
-        
-        setUser({
+        // Wenn wir hier sind, haben wir erfolgreich Benutzerdaten abgerufen
+        const userData = {
           email: authData.user.email,
-          role: benutzerProfil.role,
-          vorname: benutzerProfil.vorname,
-          nachname: benutzerProfil.nachname,
-        });
+          role: benutzerDaten.role,
+          vorname: benutzerDaten.vorname,
+          nachname: benutzerDaten.nachname,
+        };
+        
+        // Cache die Benutzerdaten
+        localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+        localStorage.setItem('user-profile-cache-time', Date.now().toString());
+        
+        setUser(userData);
       } catch (error) {
         console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
       }
     };
     
-    fetchUserData();
-    
-    // Auth-Zustandsänderungen überwachen
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      console.log("[App] Auth geändert:", event);
-      
-      if (event === "SIGNED_OUT") {
-        // Lösche Tokens aus localStorage
-        localStorage.removeItem('sb-refresh-token');
-        localStorage.removeItem('sb-access-token');
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [ENV]);
+    initializeAuth();
+  }, [ENV, isLoggedIn, loadTokensFromLocalStorage, saveTokensToLocalStorage]);
 
   return (
     <html lang="de">
@@ -219,25 +343,17 @@ export default function App() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Schulbox</title>
         <Links />
-        
-        {/* Meta-Tags für Supabase-Tokens */}
-        {document.querySelector('meta[name="x-supabase-refresh-token"]')?.getAttribute('content') && (
-          <meta 
-            name="x-supabase-refresh-token" 
-            content={document.querySelector('meta[name="x-supabase-refresh-token"]')?.getAttribute('content') || ""}
-          />
-        )}
-        {document.querySelector('meta[name="x-supabase-access-token"]')?.getAttribute('content') && (
-          <meta 
-            name="x-supabase-access-token" 
-            content={document.querySelector('meta[name="x-supabase-access-token"]')?.getAttribute('content') || ""}
-          />
-        )}
       </head>
       <body className="bg-white text-gray-900 font-sans">
         <Header user={user} />
         <main>
-          <Outlet />
+          {isInitialized ? (
+            <Outlet />
+          ) : (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          )}
         </main>
         <ScrollRestoration />
         <Scripts />

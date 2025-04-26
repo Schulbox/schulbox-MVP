@@ -1,4 +1,4 @@
-// app/routes/api.logout.tsx - Vereinfachte Logout-API
+// app/routes/api.logout.tsx
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { clearSupabaseSession } from "~/lib/session.server";
