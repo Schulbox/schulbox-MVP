@@ -1,9 +1,10 @@
 // app/components/Header.tsx
-import { Link } from "@remix-run/react";
+import { Link, useNavigate } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, ShoppingCart } from "lucide-react";
+import { LoginModal } from "~/components/LoginModal";
 
 type UserType = {
   vorname?: string;
@@ -15,8 +16,10 @@ type UserType = {
 export default function Header({ user }: { user: UserType }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [hoveredIcon, setHoveredIcon] = useState<"login" | "cart" | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const handleLinkClick = () => setMenuOpen(false);
 
@@ -83,51 +86,7 @@ export default function Header({ user }: { user: UserType }) {
 
         {/* Icons + Login */}
         <div className="flex items-center gap-4 text-gray-600 relative">
-          {user ? (
-            <div className="relative hidden md:block">
-              <button
-                onClick={() => setUserMenuOpen(prev => !prev)}
-                className="text-sm font-medium hover:text-blue-600 underline"
-              >
-                {`Hallo, ${user.vorname} ${user.nachname}`} ⌄
-              </button>
-
-              <Transition
-                show={userMenuOpen}
-                enter="transition ease-out duration-200"
-                enterFrom="opacity-0 translate-y-1"
-                enterTo="opacity-100 translate-y-0"
-                leave="transition ease-in duration-150"
-                leaveFrom="opacity-100 translate-y-0"
-                leaveTo="opacity-0 translate-y-1"
-              >
-                <div
-                  ref={dropdownRef}
-                  className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white/80 backdrop-blur-md ring-1 ring-black ring-opacity-5 z-50 overflow-hidden"
-                >
-                  <Link
-                    to="/profil"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
-                  >
-                    Profil bearbeiten
-                  </Link>
-                  <Link
-                    to="/cart"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right transition"
-                  >
-                    Einkaufswagen
-                  </Link>
-                  <div className="border-t my-1" />
-                  <Link
-                    to="/logout"
-                    className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 text-right transition"
-                  >
-                    Ausloggen
-                  </Link>
-                </div>
-              </Transition>
-            </div>
-          ) : (
+          {!user && (
             <div className="hidden md:flex items-center gap-4">
               {/* Login Icon */}
               <div
@@ -135,17 +94,22 @@ export default function Header({ user }: { user: UserType }) {
                 onMouseEnter={() => setHoveredIcon("login")}
                 onMouseLeave={() => setHoveredIcon(null)}
               >
-                <Link to="/login" title="Einloggen">
-                  <motion.div
-                    initial={{ color: "#6B7280" }}
-                    whileHover={{ scale: 1.2, color: "#3B82F6" }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="cursor-pointer"
-                  >
-                    <User className="h-6 w-6" />
-                  </motion.div>
-                </Link>
+                <motion.div
+                  onClick={() => {
+                    if (window.innerWidth > 768) {
+                      setShowLoginModal(true);
+                    } else {
+                      navigate("/login");
+                    }
+                  }}
+                  initial={{ color: "#6B7280" }}
+                  whileHover={{ scale: 1.2, color: "#3B82F6" }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  className="cursor-pointer"
+                >
+                  <User className="h-6 w-6" />
+                </motion.div>
                 <AnimatePresence>
                   {hoveredIcon === "login" && (
                     <motion.div
@@ -160,52 +124,53 @@ export default function Header({ user }: { user: UserType }) {
                   )}
                 </AnimatePresence>
               </div>
-
-              {/* Warenkorb Icon */}
-              <div
-                className="relative group"
-                onMouseEnter={() => setHoveredIcon("cart")}
-                onMouseLeave={() => setHoveredIcon(null)}
-              >
-                <Link to="/cart" title="Warenkorb">
-                  <motion.div
-                    initial={{ color: "#6B7280" }}
-                    whileHover={{ scale: 1.2, color: "#3B82F6" }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="cursor-pointer"
-                  >
-                    <ShoppingCart className="h-6 w-6" />
-                  </motion.div>
-                </Link>
-                <AnimatePresence>
-                  {hoveredIcon === "cart" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
-                    >
-                      Warenkorb
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           )}
 
-          {/* Hamburger Mobil */}
-          <button
-            className={`md:hidden ${menuOpen ? "rotate-90" : ""} transition-transform`}
-            onClick={() => setMenuOpen(!menuOpen)}
+          {/* Warenkorb Icon immer */}
+          <div
+            className="relative group"
+            onMouseEnter={() => setHoveredIcon("cart")}
+            onMouseLeave={() => setHoveredIcon(null)}
           >
-            <span className="text-2xl">☰</span>
-          </button>
+            <Link to="/cart" title="Warenkorb">
+              <motion.div
+                initial={{ color: "#6B7280" }}
+                whileHover={{ scale: 1.2, color: "#3B82F6" }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="cursor-pointer"
+              >
+                <ShoppingCart className="h-6 w-6" />
+              </motion.div>
+            </Link>
+            <AnimatePresence>
+              {hoveredIcon === "cart" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
+                >
+                  Warenkorb
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Hallo Box für eingeloggte Nutzer */}
+          {user && (
+            <div className="hidden md:flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition">
+              <div className="text-xs text-gray-500">Hallo</div>
+              <div className="text-sm font-semibold">{user.vorname} {user.nachname}</div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Mobile Menü bleibt unverändert */}
+      {/* Login Modal */}
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
     </header>
   );
 }

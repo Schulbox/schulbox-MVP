@@ -1,4 +1,4 @@
-// app/root.tsx - localStorage-basierte Lösung
+// app/root.tsx - Optimierte Version
 import {
   Links,
   Outlet,
@@ -8,11 +8,10 @@ import {
   useRevalidator,
   useRouteError,
 } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getSupabaseTokensFromSession, setSupabaseSessionCookie } from "~/lib/session.server";
-import { getSupabaseServerClient } from "~/lib/supabase.server";
+import { getSupabaseTokensFromSession } from "~/lib/session.server";
 import Header from "~/components/Header";
 import AuthErrorBoundary from "~/components/AuthErrorBoundary";
 import "./tailwind.css";
@@ -103,9 +102,142 @@ export default function App() {
   const { ENV } = useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
   const [user, setUser] = useState<User>(null);
+  const isMountedRef = useRef(true);
+  const isLoadingUserRef = useRef(false);
+  const supabaseClientRef = useRef<any>(null);
 
+  // Memoized Funktion zum Abrufen der Benutzerdaten
+  const fetchUserData = useCallback(async () => {
+    if (isLoadingUserRef.current || !isMountedRef.current) return;
+    isLoadingUserRef.current = true;
+    
+    try {
+      // Prüfe zuerst, ob Benutzerdaten im localStorage-Cache vorhanden sind
+      const cachedUserData = localStorage.getItem('user-profile-cache');
+      const cacheTime = localStorage.getItem('user-profile-cache-time');
+      
+      if (cachedUserData && cacheTime) {
+        try {
+          const userData = JSON.parse(cachedUserData);
+          
+          // Verwende Cache, wenn er weniger als 5 Minuten alt ist
+          if ((Date.now() - parseInt(cacheTime)) < 5 * 60 * 1000) {
+            console.log("[App] Verwende gecachte Benutzerdaten");
+            setUser(userData);
+            isLoadingUserRef.current = false;
+            return;
+          }
+        } catch (e) {
+          console.error("[App] Fehler beim Parsen des Benutzer-Caches:", e);
+        }
+      }
+      
+      if (!supabaseClientRef.current) {
+        console.error("[App] Supabase-Client nicht initialisiert");
+        isLoadingUserRef.current = false;
+        return;
+      }
+      
+      // Hole Benutzer-ID
+      const { data: authData } = await supabaseClientRef.current.auth.getUser();
+      if (!authData?.user) {
+        console.log("[App] Kein Benutzer gefunden");
+        isLoadingUserRef.current = false;
+        return;
+      }
+      
+      console.log("[App] Benutzer-ID:", authData.user.id);
+      
+      // Hole Benutzerprofil mit RPC
+      const { data: benutzerProfilRPC, error: rpcError } = await supabaseClientRef.current
+        .rpc('get_benutzer_profil', { user_id_param: authData.user.id });
+      
+      console.log("[App] RPC-Abfrageergebnis:", benutzerProfilRPC);
+      
+      if (rpcError) {
+        console.error("[App] RPC-Abfragefehler:", rpcError);
+        isLoadingUserRef.current = false;
+        return;
+      }
+      
+      if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
+        console.log("[App] Kein Profil gefunden, erstelle ein neues Profil");
+        
+        const { data: neuesBenutzerProfil, error: upsertError } = await supabaseClientRef.current
+          .rpc('upsert_benutzer_profil', {
+            user_id_param: authData.user.id,
+            email_param: authData.user.email,
+            role_param: 'lehrkraft',
+          });
+        
+        console.log("[App] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
+        
+        if (upsertError) {
+          console.error("[App] Fehler bei Profilerstellung:", upsertError);
+          isLoadingUserRef.current = false;
+          return;
+        }
+        
+        if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
+          const userData = {
+            email: authData.user.email,
+            role: neuesBenutzerProfil[0].role,
+            vorname: neuesBenutzerProfil[0].vorname,
+            nachname: neuesBenutzerProfil[0].nachname,
+          };
+          
+          setUser(userData);
+          
+          // Cache die Benutzerdaten
+          localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+          localStorage.setItem('user-profile-cache-time', Date.now().toString());
+          
+          isLoadingUserRef.current = false;
+          return;
+        }
+        
+        // Fallback wenn Profilerstellung fehlschlägt
+        const fallbackUser = {
+          email: authData.user.email || "unbekannt",
+          role: "lehrkraft",
+        };
+        
+        setUser(fallbackUser);
+        
+        // Cache die Fallback-Benutzerdaten
+        localStorage.setItem('user-profile-cache', JSON.stringify(fallbackUser));
+        localStorage.setItem('user-profile-cache-time', Date.now().toString());
+        
+        isLoadingUserRef.current = false;
+        return;
+      }
+      
+      const benutzerProfil = benutzerProfilRPC[0];
+      const userData = {
+        email: authData.user.email,
+        role: benutzerProfil.role,
+        vorname: benutzerProfil.vorname,
+        nachname: benutzerProfil.nachname,
+      };
+      
+      setUser(userData);
+      
+      // Cache die Benutzerdaten
+      localStorage.setItem('user-profile-cache', JSON.stringify(userData));
+      localStorage.setItem('user-profile-cache-time', Date.now().toString());
+      
+    } catch (error) {
+      console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
+    } finally {
+      isLoadingUserRef.current = false;
+    }
+  }, []);
+
+  // Initialisiere Supabase-Client und lade Benutzerdaten
   useEffect(() => {
-    // Hole Tokens aus localStorage
+    isMountedRef.current = true;
+    
+    // Prüfe, ob Tokens vorhanden sind, bevor API-Aufrufe gemacht werden
     const refresh_token = localStorage.getItem('sb-refresh-token');
     const access_token = localStorage.getItem('sb-access-token');
     
@@ -118,6 +250,7 @@ export default function App() {
     
     // Erstelle Supabase-Client mit den Tokens aus localStorage
     const supabase = createBrowserClient(ENV.SUPABASE_URL!, ENV.SUPABASE_ANON_KEY!);
+    supabaseClientRef.current = supabase;
     
     // Setze die Tokens im Supabase-Client
     supabase.auth.setSession({
@@ -125,90 +258,64 @@ export default function App() {
       access_token
     });
     
-    // Hole Benutzerdaten
-    const fetchUserData = async () => {
-      try {
-        // Hole Benutzer-ID
-        const { data: authData } = await supabase.auth.getUser();
-        if (!authData.user) {
-          console.error("[App] Kein Benutzer gefunden");
-          return;
-        }
-        
-        console.log("[App] Benutzer-ID:", authData.user.id);
-        
-        // Hole Benutzerprofil mit RPC
-        const { data: benutzerProfilRPC, error: rpcError } = await supabase
-          .rpc('get_benutzer_profil', { user_id_param: authData.user.id });
-        
-        console.log("[App] RPC-Abfrageergebnis:", benutzerProfilRPC);
-        console.log("[App] RPC-Abfragefehler:", rpcError);
-        
-        if (!benutzerProfilRPC || benutzerProfilRPC.length === 0) {
-          console.log("[App] Kein Profil gefunden, erstelle ein neues Profil");
-          
-          const { data: neuesBenutzerProfil, error: upsertError } = await supabase.rpc('upsert_benutzer_profil', {
-            user_id_param: authData.user.id,
-            email_param: authData.user.email,
-            role_param: 'lehrkraft',
-          });
-          
-          console.log("[App] Ergebnis der Profilerstellung:", neuesBenutzerProfil);
-          console.log("[App] Fehler bei Profilerstellung:", upsertError);
-          
-          if (neuesBenutzerProfil && neuesBenutzerProfil.length > 0) {
-            setUser({
-              email: authData.user.email,
-              role: neuesBenutzerProfil[0].role,
-              vorname: neuesBenutzerProfil[0].vorname,
-              nachname: neuesBenutzerProfil[0].nachname,
-            });
-            return;
-          }
-          
-          // Fallback wenn Profilerstellung fehlschlägt
-          setUser({
-            email: authData.user.email || "unbekannt",
-            role: "lehrkraft",
-          });
-          return;
-        }
-        
-        const benutzerProfil = benutzerProfilRPC[0];
-        
-        setUser({
-          email: authData.user.email,
-          role: benutzerProfil.role,
-          vorname: benutzerProfil.vorname,
-          nachname: benutzerProfil.nachname,
-        });
-      } catch (error) {
-        console.error("[App] Fehler beim Laden der Benutzerdaten:", error);
-      }
-    };
-    
+    // Lade Benutzerdaten
     fetchUserData();
     
+    // Prüfe, ob Tokens erneuert werden müssen
+    const tokenTimestamp = localStorage.getItem('sb-token-timestamp');
+    if (tokenTimestamp) {
+      const timestamp = parseInt(tokenTimestamp);
+      const now = Date.now();
+      const hoursPassed = (now - timestamp) / (1000 * 60 * 60);
+      
+      // Wenn Tokens älter als 23 Stunden sind, erneuere sie
+      if (hoursPassed > 23) {
+        console.log("[App] Tokens sind älter als 23 Stunden, erneuere sie");
+        supabase.auth.refreshSession();
+        localStorage.setItem('sb-token-timestamp', now.toString());
+      }
+    }
+    
+    // Auth-Zustandsänderungen überwachen
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[App] Auth geändert:", event);
+      
+      if (event === "SIGNED_IN") {
+        if (session) {
+          // Aktualisiere Tokens im localStorage
+          localStorage.setItem('sb-refresh-token', session.refresh_token);
+          localStorage.setItem('sb-access-token', session.access_token);
+          localStorage.setItem('sb-token-timestamp', Date.now().toString());
+        }
+        fetchUserData();
+      } else if (event === "SIGNED_OUT") {
+        // Lösche Tokens und Cache aus localStorage
+        localStorage.removeItem('sb-refresh-token');
+        localStorage.removeItem('sb-access-token');
+        localStorage.removeItem('sb-token-timestamp');
+        localStorage.removeItem('user-profile-cache');
+        localStorage.removeItem('user-profile-cache-time');
+        setUser(null);
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        // Aktualisiere Tokens im localStorage
+        localStorage.setItem('sb-refresh-token', session.refresh_token);
+        localStorage.setItem('sb-access-token', session.access_token);
+        localStorage.setItem('sb-token-timestamp', Date.now().toString());
+      }
+      
+      // Nur revalidieren, wenn sich der Auth-Zustand ändert
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
         revalidator.revalidate();
-        
-        if (event === "SIGNED_OUT") {
-          // Lösche Tokens aus localStorage
-          localStorage.removeItem('sb-refresh-token');
-          localStorage.removeItem('sb-access-token');
-          setUser(null);
-        } else if (event === "SIGNED_IN") {
-          fetchUserData();
-        }
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [ENV, revalidator]);
+    return () => {
+      isMountedRef.current = false;
+      subscription.unsubscribe();
+    };
+  }, [ENV, revalidator, fetchUserData]);
 
   return (
     <html lang="de">

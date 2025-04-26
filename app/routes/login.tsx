@@ -1,11 +1,12 @@
-// app/routes/login.tsx - localStorage-basierte Lösung
-import { Form, useActionData, useNavigation, Link, useSearchParams } from "@remix-run/react";
+// app/routes/login.tsx - Optimierte Version
+import { Form, useActionData, useNavigate, Link } from "@remix-run/react";
 import type { ActionFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import { useEffect } from "react";
+import { json } from "@remix-run/node";
+import { useEffect, useRef } from "react";
 import { supabase } from "~/lib/supabaseClient";
 import { setSupabaseSessionCookie } from "~/lib/session.server";
 
+// Typ für die Antwort vom Server
 type LoginResponse = {
   success?: boolean;
   tokens?: {
@@ -28,7 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (error || !data.session) {
       console.error("[login.action] Login fehlgeschlagen:", error?.message);
-      return json({ error: error?.message || "Login fehlgeschlagen." });
+      return json<LoginResponse>({ error: error?.message || "Login fehlgeschlagen." });
     }
 
     console.log("✅ Login erfolgreich:", { 
@@ -45,7 +46,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
 
     // Übergebe die Tokens an den Client zur Speicherung im localStorage
-    return json(
+    return json<LoginResponse>(
       { 
         success: true,
         tokens: {
@@ -61,35 +62,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
   } catch (err) {
     console.error("[login.action] Unerwarteter Fehler:", err);
-    return json({ 
+    return json<LoginResponse>({ 
       error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut." 
     });
   }
 };
 
 export default function Login() {
-  const navigation = useNavigation();
+  const navigate = useNavigate();
   const actionData = useActionData<LoginResponse>();
-  const [searchParams] = useSearchParams();
+  const isNavigatingRef = useRef(false);
 
-// In login.tsx
-useEffect(() => {
-  // Wenn Login erfolgreich war und Tokens zurückgegeben wurden
-  if (actionData && 
-      'success' in actionData && 
-      actionData.success === true && 
-      'tokens' in actionData && 
-      actionData.tokens) {
-    
-    // Speichere Tokens im localStorage
-    localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
-    localStorage.setItem('sb-access-token', actionData.tokens.access_token);
-    
-    // Navigiere zur Startseite
-    window.location.href = "/";
-  }
-}, [actionData]);
-
+  useEffect(() => {
+    // Verhindere mehrfache Ausführung
+    if (actionData?.success && actionData?.tokens && !isNavigatingRef.current) {
+      isNavigatingRef.current = true;
+      
+      // Speichere Tokens im localStorage
+      localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
+      localStorage.setItem('sb-access-token', actionData.tokens.access_token);
+      
+      // Speichere Zeitstempel für Token-Erneuerung
+      localStorage.setItem('sb-token-timestamp', Date.now().toString());
+      
+      console.log("[Login] Tokens im localStorage gespeichert, navigiere zur Startseite");
+      
+      // Verwende Remix-Navigation statt window.location für bessere Performance
+      navigate("/", { replace: true });
+    }
+  }, [actionData, navigate]);
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen pt-20 p-4">
@@ -113,9 +114,8 @@ useEffect(() => {
         <button
           type="submit"
           className="bg-blue-600 hover:bg-blue-700 transition text-white font-medium rounded px-4 py-2 disabled:opacity-50"
-          disabled={navigation.state === "submitting"}
         >
-          {navigation.state === "submitting" ? "Einloggen..." : "Einloggen"}
+          Einloggen
         </button>
 
         {actionData?.error && (
