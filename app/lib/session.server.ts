@@ -1,4 +1,4 @@
-// Vereinfachte Session-Server-Implementierung mit direktem Cookie-Zugriff
+// Verbesserte Session-Server-Implementierung mit Domain-spezifischen Cookie-Einstellungen
 import { createCookieSessionStorage } from "@remix-run/node";
 
 // Definiere eine längere Cookie-Lebensdauer
@@ -23,25 +23,31 @@ export const sessionStorage = createCookieSessionStorage({
 export const { getSession, commitSession, destroySession } = sessionStorage;
 
 /**
- * Setzt ein einfaches Session-Cookie direkt
+ * Setzt ein einfaches Session-Cookie direkt mit Domain-spezifischen Einstellungen
  */
 export async function setSupabaseSessionCookie(
   request: Request,
   refresh_token: string,
   access_token: string
 ): Promise<string> {
+  // Erstelle ein einfaches Cookie mit dem Session-Marker
   const cookieValue = "true";
   const expires = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
   
-  // Explizit die Domain setzen (passen Sie dies an Ihre Domain an)
-  const domain = ".schulbox.at"; // Beachten Sie den führenden Punkt für Subdomains
+  // Extrahiere die Domain aus der Request-URL
+  const url = new URL(request.url);
+  const hostname = url.hostname;
+  
+  // Bestimme die Cookie-Domain basierend auf dem Hostname
+  // Für localhost keine Domain setzen
+  const domainPart = hostname === 'localhost' ? '' : `; Domain=${hostname}`;
   
   console.log("[setSupabaseSessionCookie] Setze einfaches Session-Cookie:", cookieValue);
+  console.log("[setSupabaseSessionCookie] Hostname:", hostname);
   
-  // Gib das Cookie mit expliziter Domain zurück
-  return `${SESSION_COOKIE_NAME}=${cookieValue}; Path=/; Domain=${domain}; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
+  // Gib das Cookie direkt zurück mit Domain-spezifischen Einstellungen
+  return `${SESSION_COOKIE_NAME}=${cookieValue}; Path=/${domainPart}; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
 }
-
 
 /**
  * Prüft, ob das Session-Cookie vorhanden ist
@@ -78,7 +84,15 @@ export async function getSupabaseTokensFromSession(request: Request) {
 export async function clearSupabaseSession(request: Request): Promise<string> {
   console.log("[clearSupabaseSession] Session-Cookie gelöscht");
   
+  // Extrahiere die Domain aus der Request-URL
+  const url = new URL(request.url);
+  const hostname = url.hostname;
+  
+  // Bestimme die Cookie-Domain basierend auf dem Hostname
+  // Für localhost keine Domain setzen
+  const domainPart = hostname === 'localhost' ? '' : `; Domain=${hostname}`;
+  
   // Setze das Cookie mit einem Ablaufdatum in der Vergangenheit
   const expires = new Date(0); // 1970-01-01
-  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
+  return `${SESSION_COOKIE_NAME}=; Path=/${domainPart}; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}`;
 }
