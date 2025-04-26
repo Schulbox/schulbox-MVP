@@ -2,6 +2,7 @@
 import { Link } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
+import { motion } from "framer-motion";
 
 type User = {
   vorname?: string;
@@ -15,24 +16,23 @@ export default function Header({ user }: { user: User }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleLinkClick = () => {
-    setMenuOpen(false);
-  };
+  const handleLinkClick = () => setMenuOpen(false);
 
-  // Close dropdown when clicking outside or pressing Escape
+  // 🧠 Dropdown nach Login schließen
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [user?.email]);
+
+  // Klick außerhalb / ESC
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
     };
-
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setUserMenuOpen(false);
-      }
+      if (event.key === "Escape") setUserMenuOpen(false);
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEsc);
     return () => {
@@ -128,27 +128,44 @@ export default function Header({ user }: { user: User }) {
               </Transition>
             </div>
           ) : (
-            <div className="hidden md:block">
-              <Link to="/login" title="Einloggen">
-                <span
-                  role="img"
-                  aria-label="Login"
-                  className="text-xl transition-all duration-200 ease-in-out hover:scale-110 hover:text-blue-500 active:scale-90 cursor-pointer"
-                >
-                  👤
-                </span>
-              </Link>
+            <div className="hidden md:flex items-center gap-4">
+              {/* Login Icon */}
+              <div className="relative group">
+                <Link to="/login" title="Einloggen">
+                  <motion.span
+                    role="img"
+                    aria-label="Login"
+                    className="text-xl cursor-pointer text-gray-600"
+                    whileHover={{ scale: 1.2, color: "#3B82F6" }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    👤
+                  </motion.span>
+                </Link>
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                  Einloggen
+                </div>
+              </div>
             </div>
           )}
-          <Link to="/cart" title="Warenkorb">
-            <span
-              role="img"
-              aria-label="Warenkorb"
-              className="text-xl transition-transform duration-200 hover:scale-110 active:scale-90"
-            >
-              🛒
-            </span>
-          </Link>
+
+          {/* Warenkorb Icon mit Tooltip */}
+          <div className="relative group">
+            <Link to="/cart" title="Warenkorb">
+              <motion.span
+                role="img"
+                aria-label="Warenkorb"
+                className="text-xl cursor-pointer"
+                whileHover={{ scale: 1.2, color: "#3B82F6" }}
+                whileTap={{ scale: 0.9 }}
+              >
+                🛒
+              </motion.span>
+            </Link>
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              Warenkorb
+            </div>
+          </div>
 
           {/* Hamburger Mobil */}
           <button
