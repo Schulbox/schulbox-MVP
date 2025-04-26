@@ -1,10 +1,9 @@
-// app/components/Header.tsx
 import { Link } from "@remix-run/react";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { User, ShoppingCart, LogOut } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { LogOut, ShoppingCart } from "lucide-react";
 
-type HeaderProps = {
+// Typdefinition für Props
+export type HeaderProps = {
   user: {
     email?: string;
     role?: string;
@@ -16,7 +15,18 @@ type HeaderProps = {
 };
 
 export default function Header({ user, isLoggedIn, isLoading }: HeaderProps) {
-  const [hoveredIcon, setHoveredIcon] = useState<"login" | "cart" | "logout" | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closeOnClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", closeOnClickOutside);
+    return () => document.removeEventListener("mousedown", closeOnClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -36,104 +46,54 @@ export default function Header({ user, isLoggedIn, isLoading }: HeaderProps) {
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo + Navigation */}
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-box.png" alt="Schulbox Icon" className="h-10 block md:hidden" />
-            <img src="/logo.png" alt="Schulbox Logo" className="h-10 hidden md:block" />
-          </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 font-medium">
-            <Link to="/" className="hover:text-blue-600">Startseite</Link>
-            <Link to="/shop" className="hover:text-blue-600">Shop</Link>
-            <Link to="/about" className="hover:text-blue-600">Über uns</Link>
-          </nav>
-        </div>
+        <Link to="/" className="text-2xl font-bold text-blue-600">
+          Schulbox
+        </Link>
 
-        {/* Icons rechts */}
-        <div className="flex items-center gap-4 text-gray-600 relative">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 font-medium">
+          <Link to="/" className="hover:text-blue-600">Startseite</Link>
+          <Link to="/shop" className="hover:text-blue-600">Shop</Link>
+          <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
+        </nav>
+
+        <div className="flex items-center gap-4 relative">
           {isLoading ? (
-            <div className="text-gray-400 text-sm">Lade...</div>
-          ) : isLoggedIn ? (
+            <div className="text-gray-500 text-sm">Lade...</div>
+          ) : isLoggedIn && user ? (
             <>
-              {/* Warenkorb */}
               <div
-                className="relative group"
-                onMouseEnter={() => setHoveredIcon("cart")}
-                onMouseLeave={() => setHoveredIcon(null)}
+                className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-sm flex flex-col items-center"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
               >
-                <Link to="/cart">
-                  <motion.div
-                    whileHover={{ scale: 1.2, color: "#3B82F6" }}
-                    whileTap={{ scale: 0.9 }}
-                    className="cursor-pointer"
-                  >
-                    <ShoppingCart className="h-6 w-6" />
-                  </motion.div>
-                </Link>
-                <AnimatePresence>
-                  {hoveredIcon === "cart" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1"
-                    >
-                      Warenkorb
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <span className="text-gray-500">Hallo</span>
+                <span className="font-medium">{user.vorname} {user.nachname}</span>
               </div>
 
-              {/* Hallo-Box */}
-              <div className="flex flex-col items-center px-3 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 transition">
-                <span className="text-xs text-gray-500 leading-none">Hallo</span>
-                <span className="text-sm font-semibold text-gray-800 leading-none">
-                  {user?.vorname} {user?.nachname}
-                </span>
-              </div>
-
-              {/* Logout */}
-              <div
-                className="relative group"
-                onMouseEnter={() => setHoveredIcon("logout")}
-                onMouseLeave={() => setHoveredIcon(null)}
-              >
-                <motion.div
-                  onClick={handleLogout}
-                  whileHover={{ scale: 1.2, color: "#EF4444" }}
-                  whileTap={{ scale: 0.9 }}
-                  className="cursor-pointer"
+              {dropdownOpen && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 top-12 bg-white shadow-md rounded-lg border text-sm w-48 z-50"
                 >
-                  <LogOut className="h-6 w-6" />
-                </motion.div>
-                <AnimatePresence>
-                  {hoveredIcon === "logout" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1"
-                    >
-                      Abmelden
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                  <Link to="/profil" className="block px-4 py-2 hover:bg-gray-100">🧾 Profil bearbeiten</Link>
+                  <Link to="/cart" className="block px-4 py-2 hover:bg-gray-100">🛒 Einkaufswagen</Link>
+                  <div className="border-t mt-1"></div>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
+                  >
+                    🚪 Ausloggen
+                  </button>
+                </div>
+              )}
+
+              <Link to="/cart" className="ml-2">
+                <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-blue-600" />
+              </Link>
             </>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                to="/login"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-              >
-                Einloggen
-              </Link>
-              <Link
-                to="/register"
-                className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded text-sm"
-              >
-                Registrieren
-              </Link>
+            <div className="flex items-center gap-2 text-sm">
+              <Link to="/login" className="text-blue-600 hover:underline">Einloggen</Link>
+              <Link to="/register" className="text-blue-600 hover:underline">Registrieren</Link>
             </div>
           )}
         </div>
