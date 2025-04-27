@@ -1,0 +1,1 @@
+import{f as e}from"/build/_shared/chunk-YBGD6IQF.js";import{b as f}from"/build/_shared/chunk-TANAHWHW.js";import{e as t}from"/build/_shared/chunk-ADMCF34Z.js";var o=t(f(),1);function p(){return(0,o.jsx)("div",{className:"p-4",children:(0,o.jsx)(e,{})})}export{p as default};

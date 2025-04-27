@@ -2,7 +2,8 @@
     "rewrites": [
       { "source": "/(.*)", "destination": "/index.html" }
     ],
-    "buildCommand": "remix build",
-    "framework": "remix"
+    "buildCommand": "npm run build",
+    "outputDirectory": "build/client",
+    "framework": null
   }
   
