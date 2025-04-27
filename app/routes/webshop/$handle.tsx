@@ -1,9 +1,16 @@
+// app/routes/webshop/$handle.tsx
+
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 export const handle = { breadcrumb: false };
 
 export async function loader({ params }: { params: { handle: string } }) {
+  const decodedHandle = decodeURIComponent(params.handle);
+
+  console.log("Empfangener Handle aus URL:", params.handle);
+  console.log("Handle nach decodeURIComponent:", decodedHandle);
+
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
     method: "POST",
     headers: {
@@ -12,38 +19,47 @@ export async function loader({ params }: { params: { handle: string } }) {
     },
     body: JSON.stringify({
       query: `
-        query getProductByHandle($handle: String!) {
-          productByHandle(handle: $handle) {
-            title
-            description
-            images(first: 5) {
-              edges {
-                node {
-                  url
-                  altText
+        query getProductByHandle($query: String!) {
+          products(first: 1, query: $query) {
+            edges {
+              node {
+                title
+                description
+                images(first: 5) {
+                  edges {
+                    node {
+                      url
+                      altText
+                    }
+                  }
                 }
-              }
-            }
-            priceRange {
-              minVariantPrice {
-                amount
-                currencyCode
+                priceRange {
+                  minVariantPrice {
+                    amount
+                    currencyCode
+                  }
+                }
               }
             }
           }
         }
       `,
-      variables: { handle: params.handle },
+      variables: {
+        query: `handle:${decodedHandle}`,
+      },
     }),
   });
 
   const result = await response.json();
 
-  if (!result.data.productByHandle) {
+  if (!result.data.products.edges.length) {
+    console.error("Produkt nicht gefunden für Handle:", decodedHandle);
     throw new Response("Produkt nicht gefunden", { status: 404 });
   }
 
-  return json(result.data.productByHandle);
+  const product = result.data.products.edges[0].node;
+
+  return json(product);
 }
 
 export default function ProductDetailPage() {
