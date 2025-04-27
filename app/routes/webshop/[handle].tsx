@@ -1,9 +1,13 @@
-// app/routes/webshop.$handle.tsx
+// app/routes/webshop/[handle].tsx
 import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
 // Loader für ein einzelnes Produkt anhand des Handles
 export async function loader({ params }: { params: { handle: string } }) {
+  if (!params.handle) {
+    throw new Response("Kein Produkt-Handle angegeben", { status: 400 });
+  }
+
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
     method: "POST",
     headers: {
