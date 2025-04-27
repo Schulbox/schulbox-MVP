@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { User, ShoppingCart, Menu, X, ChevronDown } from "lucide-react";
 import LoginPopup from "./LoginPopup";
 import { useRevalidator, useFetcher } from "@remix-run/react";
-import { clearSupabaseSession } from "~/lib/session.server"; // Import clearSupabaseSession
+import { useOutletContext } from "@remix-run/react";
 
 // Typdefinition
 export type UserType = {
@@ -15,6 +15,13 @@ export type UserType = {
   role?: string;
   email?: string;
 } | null;
+
+type OutletContextType = {
+  user: UserType;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  refreshAuth: () => Promise<void>;
+};
 
 export default function Header({ user, isLoggedIn, isLoading }: { user: UserType, isLoggedIn: boolean, isLoading: boolean }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -25,6 +32,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const logoutFetcher = useFetcher(); // Fetcher für Logout
+  const { refreshAuth } = useOutletContext<OutletContextType>();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -55,9 +63,15 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     // Server-seitige Session löschen (Cookies)
     logoutFetcher.submit(null, { method: "post", action: "/logout" });
     
+    // Direkt refreshAuth aufrufen, um den Authentifizierungsstatus sofort zu aktualisieren
+    await refreshAuth();
+    console.log("[Logout] Auth-Status aktualisiert");
+    
     // UI sofort aktualisieren
-    window.dispatchEvent(new Event("storage"));
     revalidator.revalidate();
+    
+    // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
+    window.dispatchEvent(new Event("storage"));
   };
 
   // Benutzeranzeigename bestimmen

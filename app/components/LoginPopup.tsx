@@ -34,6 +34,7 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const popupRef = useRef<HTMLDivElement>(null);
   const revalidator = useRevalidator();
+  const { refreshAuth } = useOutletContext<OutletContextType>();
 
   // Schließen beim Klicken außerhalb des Popups
   useEffect(() => {
@@ -71,15 +72,23 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
 
       console.log("[LoginPopup] Tokens erfolgreich im localStorage gespeichert");
 
-      // Seite neu validieren
-      revalidator.revalidate();
-      
-      // Popup schließen
-      onClose();
+      // Manuell refreshAuth aufrufen, um den Authentifizierungsstatus sofort zu aktualisieren
+      refreshAuth().then(() => {
+        console.log("[LoginPopup] Auth-Status aktualisiert");
+        
+        // Zusätzlich revalidate aufrufen, um sicherzustellen, dass die UI aktualisiert wird
+        revalidator.revalidate();
+        
+        // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
+        window.dispatchEvent(new Event("storage"));
+        
+        // Popup schließen
+        onClose();
+      });
     } else if (fetcher.data?.error) {
       setIsSubmitting(false);
     }
-  }, [fetcher.data, revalidator, onClose]);
+  }, [fetcher.data, revalidator, onClose, refreshAuth]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     setIsSubmitting(true);

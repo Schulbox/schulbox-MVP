@@ -426,15 +426,33 @@ export default function App() {
     refreshAuth();
   
     // Bei JEDER Änderung von localStorage sofort updaten
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && (event.key.startsWith('sb-') || event.key === 'user-profile-cache' || event.key === 'sb-is-logged-in')) {
-        console.log("[App] Storage-Änderung erkannt:", event.key, event.newValue);
+    const handleStorageChange = (event: StorageEvent | CustomEvent) => {
+      if (event instanceof StorageEvent) {
+        if (event.key && (event.key.startsWith('sb-') || event.key === 'user-profile-cache' || event.key === 'sb-is-logged-in')) {
+          console.log("[App] Storage-Änderung erkannt:", event.key, event.newValue);
+          refreshAuth();
+        }
+      } else {
+        // Für manuell ausgelöste Events (window.dispatchEvent(new Event("storage")))
+        console.log("[App] Manuelles Storage-Event erkannt");
         refreshAuth();
       }
     };
   
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    // Zusätzlicher Event-Listener für manuell ausgelöste Events
+    const handleCustomStorageEvent = () => {
+      console.log("[App] Manuelles Storage-Event erkannt");
+      refreshAuth();
+    };
+    
+    window.addEventListener('storage', handleCustomStorageEvent);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', handleCustomStorageEvent);
+    };
   }, [refreshAuth]);
 
   return (
