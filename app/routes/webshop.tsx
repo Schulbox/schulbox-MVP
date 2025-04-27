@@ -1,46 +1,85 @@
-// app/routes/webshop.tsx
-import { useState, useEffect } from "react";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { fetchFromShopify } from "~/lib/shopify/shopifyClient.server"; // ← Du verwendest jetzt deinen sauberen Client!
+
+type Product = {
+  id: string;
+  title: string;
+  description: string;
+  images: {
+    edges: {
+      node: {
+        url: string;
+        altText: string | null;
+      };
+    }[];
+  };
+  priceRange: {
+    minVariantPrice: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+};
+
+export async function loader() {
+  const query = `
+    {
+      products(first: 20) {
+        edges {
+          node {
+            id
+            title
+            description
+            images(first: 1) {
+              edges {
+                node {
+                  url
+                  altText
+                }
+              }
+            }
+            priceRange {
+              minVariantPrice {
+                amount
+                currencyCode
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await fetchFromShopify(query);
+  const products = data.products.edges.map((edge: any) => edge.node);
+
+  return json(products);
+}
 
 export default function Webshop() {
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Shopify store URL
-  const shopifyStoreUrl = "https://nqwde0-ua.myshopify.com";
-  
-  useEffect(() => {
-    // Kurze Verzögerung, um sicherzustellen, dass der iFrame geladen wird
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  const products = useLoaderData<typeof loader>() as Product[];
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 py-6 w-full flex-grow">
-        <h1 className="text-2xl font-bold mb-6">🎒 Schulbox Webshop</h1>
-        
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-600">Der Webshop wird geladen...</p>
+    <div className="max-w-7xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-8 text-center">🎒 Unser Schulbox Webshop</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products.map((product) => (
+          <div key={product.id} className="border rounded-lg p-4 shadow hover:shadow-lg transition">
+            {product.images.edges[0]?.node.url && (
+              <img
+                src={product.images.edges[0].node.url}
+                alt={product.images.edges[0].node.altText || product.title}
+                className="w-full h-48 object-cover mb-4 rounded"
+              />
+            )}
+            <h2 className="text-xl font-semibold mb-2">{product.title}</h2>
+            <p className="text-gray-600 text-sm mb-4">{product.description}</p>
+            <div className="font-bold">
+              {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
+            </div>
           </div>
-        )}
-        
-        <div className={`w-full h-[calc(100vh-200px)] ${isLoading ? 'hidden' : 'block'}`}>
-          <iframe 
-            src={shopifyStoreUrl}
-            title="Schulbox Webshop"
-            className="w-full h-full border-0 rounded-lg shadow-lg"
-            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-          />
-        </div>
-        
-        <div className="mt-6 text-sm text-gray-500">
-          <p>Bei Problemen mit der Anzeige des Webshops können Sie auch direkt <a href={shopifyStoreUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">zum Shopify-Shop</a> wechseln.</p>
-        </div>
+        ))}
       </div>
     </div>
   );
