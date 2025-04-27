@@ -1,4 +1,4 @@
-// localStorage-only Root-Komponente
+// app/root.tsx
 import { useEffect, useState, useCallback } from "react";
 import {
   Links,
@@ -21,7 +21,7 @@ import { useOutletContext } from "@remix-run/react";
 
 
 // Typ für den Benutzer
-type User = {
+export type User = {
   email?: string;
   role?: string;
   vorname?: string;
@@ -32,11 +32,14 @@ type OutletContextType = {
   user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  refreshAuth: () => Promise<void>; // 👈🏻 Funktion, die wir gleich übergeben
+  refreshAuth: () => Promise<void>;
 };
 
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  // Hole Tokens aus Cookies
+  const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
+  
   // Erstelle Supabase-Client
   const response = new Response();
   const supabase = createServerClient(
@@ -45,11 +48,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { request, response }
   );
 
-  // Prüfe, ob der Benutzer eingeloggt ist (im localStorage-only Ansatz immer false)
-  // Die eigentliche Authentifizierung erfolgt client-seitig
-  const isLoggedIn = false;
+  // Prüfe, ob der Benutzer eingeloggt ist
+  let isLoggedIn = false;
   
-  console.log("[root.loader] localStorage-only Ansatz: Server-seitig immer nicht eingeloggt");
+  if (refresh_token && access_token) {
+    try {
+      // Setze die Session
+      const { data, error } = await supabase.auth.setSession({
+        refresh_token,
+        access_token
+      });
+      
+      if (data?.session) {
+        isLoggedIn = true;
+        console.log("[root.loader] Benutzer ist eingeloggt (Server-seitig)");
+      } else if (error) {
+        console.error("[root.loader] Fehler beim Setzen der Session:", error.message);
+      }
+    } catch (error) {
+      console.error("[root.loader] Fehler bei der Authentifizierung:", error);
+    }
+  } else {
+    console.log("[root.loader] Keine Tokens in Cookies gefunden");
+  }
 
   return json(
     {
@@ -70,7 +91,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function App() {
   const { ENV, isLoggedIn: serverIsLoggedIn } = useLoaderData<typeof loader>();
   const [user, setUser] = useState<User>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(serverIsLoggedIn);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const revalidator = useRevalidator();
 
@@ -83,10 +104,10 @@ export default function App() {
         return null;
       }
 
-      // Prüfe, ob der Benutzer eingeloggt ist (localStorage-Flag)
+      // Prüfe, ob der Benutzer eingeloggt ist (localStorage-Flag oder Server-seitig)
       const isLoggedInFlag = localStorage.getItem('sb-is-logged-in');
-      if (isLoggedInFlag !== 'true') {
-        console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
+      if (isLoggedInFlag !== 'true' && !serverIsLoggedIn) {
+        console.log("[App] Benutzer ist nicht eingeloggt");
         return null;
       }
 
@@ -121,7 +142,7 @@ export default function App() {
       console.error("[App] Fehler beim Initialisieren von Supabase:", error);
       return null;
     }
-  }, [ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY]);
+  }, [ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, serverIsLoggedIn]);
 
   // Lade Benutzerdaten
   const fetchUserData = useCallback(async (supabase: any) => {
@@ -350,11 +371,12 @@ export default function App() {
     }
   }, []);
 
-  async function initializeAuth() {
+  // Funktion zum Aktualisieren der Authentifizierung
+  const refreshAuth = useCallback(async () => {
     setIsLoading(true);
     try {
       if (typeof window === "undefined" || !window.localStorage) {
-        console.log("[App] localStorage nicht verfügbar");
+        console.log("[refreshAuth] localStorage nicht verfügbar");
         setIsLoggedIn(false);
         setUser(null);
         setIsLoading(false);
@@ -363,12 +385,12 @@ export default function App() {
   
       const isLoggedInFlag = localStorage.getItem("sb-is-logged-in");
   
-      if (isLoggedInFlag === "true") {
-        console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
+      if (isLoggedInFlag === "true" || serverIsLoggedIn) {
+        console.log("[refreshAuth] Benutzer ist eingeloggt");
   
         const supabase = initializeSupabase();
         if (!supabase) {
-          console.log("[App] Supabase konnte nicht initialisiert werden");
+          console.log("[refreshAuth] Supabase konnte nicht initialisiert werden");
           setIsLoggedIn(false);
           setUser(null);
           setIsLoading(false);
@@ -377,96 +399,43 @@ export default function App() {
   
         const userData = await fetchUserData(supabase);
         if (userData) {
-          console.log("[App] Benutzerdaten geladen:", userData);
+          console.log("[refreshAuth] Benutzerdaten geladen:", userData);
           setUser(userData);
           setIsLoggedIn(true);
         } else {
-          console.log("[App] Keine Benutzerdaten gefunden");
+          console.log("[refreshAuth] Keine Benutzerdaten gefunden");
           setUser(null);
           setIsLoggedIn(true); // eingeloggt ohne Profil
         }
       } else {
-        console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
+        console.log("[refreshAuth] Benutzer ist nicht eingeloggt");
         setIsLoggedIn(false);
         setUser(null);
       }
     } catch (error) {
-      console.error("[App] Fehler bei der Authentifizierung:", error);
+      console.error("[refreshAuth] Fehler bei der Authentifizierung:", error);
       setIsLoggedIn(false);
       setUser(null);
     } finally {
       setIsLoading(false);
     }
-  }
-  
+  }, [fetchUserData, initializeSupabase, serverIsLoggedIn]);
 
   // Initialisiere Authentifizierung
   useEffect(() => {
-    const initializeAuth = async () => {
-      setIsLoading(true);
-      try {
-        if (typeof window === "undefined" || !window.localStorage) {
-          console.log("[App] localStorage nicht verfügbar");
-          setIsLoggedIn(false);
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
+    refreshAuth();
   
-        const isLoggedInFlag = localStorage.getItem("sb-is-logged-in");
-  
-        if (isLoggedInFlag === "true") {
-          console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
-  
-          const supabase = initializeSupabase();
-          if (!supabase) {
-            console.log("[App] Supabase konnte nicht initialisiert werden");
-            setIsLoggedIn(false);
-            setUser(null);
-            setIsLoading(false);
-            return;
-          }
-  
-          const userData = await fetchUserData(supabase);
-          if (userData) {
-            console.log("[App] Benutzerdaten geladen:", userData);
-            setUser(userData);
-            setIsLoggedIn(true);
-          } else {
-            console.log("[App] Keine Benutzerdaten gefunden");
-            setUser(null);
-            setIsLoggedIn(true); // eingeloggt ohne Profil
-          }
-        } else {
-          console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
-          setIsLoggedIn(false);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("[App] Fehler bei der Authentifizierung:", error);
-        setIsLoggedIn(false);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    initializeAuth();
-  
-    // --- NEU: bei JEDER Änderung von localStorage sofort updaten
+    // Bei JEDER Änderung von localStorage sofort updaten
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key && (event.key.startsWith('sb-') || event.key === 'user-profile-cache' || event.key === 'sb-is-logged-in')) {
         console.log("[App] Storage-Änderung erkannt:", event.key, event.newValue);
-        initializeAuth();
+        refreshAuth();
       }
     };
   
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [initializeSupabase, fetchUserData]);
-  
-  const refreshAuth = initializeAuth;
-
+  }, [refreshAuth]);
 
   return (
     <html lang="de">
@@ -476,10 +445,15 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-gray-50 min-h-screen">
         <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
-        <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth, initializeAuth }} />
+        <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
         <ScrollRestoration />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.ENV = ${JSON.stringify(ENV)}`,
+          }}
+        />
         <Scripts />
         <LiveReload />
       </body>

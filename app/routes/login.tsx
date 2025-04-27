@@ -5,8 +5,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { createServerClient } from "@supabase/auth-helpers-remix";
 import { setSupabaseSessionCookie } from "~/lib/session.server";
 
-
-type LoginResponse = {
+export type LoginResponse = {
   success?: boolean;
   tokens?: {
     refresh_token: string;
@@ -46,6 +45,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return json<LoginResponse>({ error: "Login fehlgeschlagen" });
   }
 
+  // Setze Cookies für Server-seitige Authentifizierung
   const cookie = await setSupabaseSessionCookie(
     request,
     data.session.refresh_token,
@@ -71,23 +71,24 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Login() {
   const actionData = useActionData<LoginResponse>();
   const navigate = useNavigate();
-  const revalidator = useRevalidator();  // <-- hinzugefügt!
+  const revalidator = useRevalidator();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     if (actionData?.success && actionData?.tokens) {
       setIsLoggingIn(true);
       try {
+        // Speichere Tokens im localStorage für Client-seitige Authentifizierung
         localStorage.setItem('sb-refresh-token', actionData.tokens.refresh_token);
         localStorage.setItem('sb-access-token', actionData.tokens.access_token);
         localStorage.setItem('sb-auth-timestamp', Date.now().toString());
         localStorage.setItem('sb-is-logged-in', 'true');
         console.log("[Login] Tokens erfolgreich im localStorage gespeichert");
 
-        // ✅ Seite neu validieren (user, isLoggedIn etc. wird neu geladen)
+        // Seite neu validieren (user, isLoggedIn etc. wird neu geladen)
         revalidator.revalidate();
 
-        // ✅ Danach auf Startseite navigieren
+        // Danach auf Startseite navigieren
         navigate("/", { replace: true });
       } catch (error) {
         console.error("[Login] Fehler beim Speichern der Tokens:", error);
