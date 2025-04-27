@@ -1,83 +1,82 @@
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { fetchFromShopify } from "~/lib/shopify/shopifyClient.server"; // ← Du verwendest jetzt deinen sauberen Client!
+// app/routes/webshop.tsx
 
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  images: {
-    edges: {
-      node: {
-        url: string;
-        altText: string | null;
-      };
-    }[];
-  };
-  priceRange: {
-    minVariantPrice: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-};
+import { useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { Product } from "~/types";
+
 
 export async function loader() {
-  const query = `
-    {
-      products(first: 20) {
-        edges {
-          node {
-            id
-            title
-            description
-            images(first: 1) {
-              edges {
-                node {
-                  url
-                  altText
+  const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": "DEIN_STOREFRONT_API_TOKEN",
+    },
+    body: JSON.stringify({
+      query: `{
+        products(first: 20) {
+          edges {
+            node {
+              id
+              title
+              description
+              handle
+              images(first: 1) {
+                edges {
+                  node {
+                    url
+                    altText
+                  }
                 }
               }
-            }
-            priceRange {
-              minVariantPrice {
-                amount
-                currencyCode
+              priceRange {
+                minVariantPrice {
+                  amount
+                  currencyCode
+                }
               }
             }
           }
         }
-      }
-    }
-  `;
+      }`
+    })
+  });
 
-  const data = await fetchFromShopify(query);
-  const products = data.products.edges.map((edge: any) => edge.node);
-
-  return json(products);
+  const result = await response.json();
+  return json(result.data.products.edges.map((edge: any) => edge.node));
 }
 
 export default function Webshop() {
-  const products = useLoaderData<typeof loader>() as Product[];
+  const products = useLoaderData<typeof loader>();
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8 text-center">🎒 Unser Schulbox Webshop</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <div key={product.id} className="border rounded-lg p-4 shadow hover:shadow-lg transition">
+    <div className="max-w-7xl mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6 text-center flex items-center justify-center gap-2">
+        <span>🎒</span> Unser Schulbox Webshop
+      </h1>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {products.map((product: Product) => (
+          <div
+            key={product.id}
+            className="border rounded-lg p-3 shadow hover:shadow-md transition flex flex-col"
+          >
             {product.images.edges[0]?.node.url && (
               <img
                 src={product.images.edges[0].node.url}
                 alt={product.images.edges[0].node.altText || product.title}
-                className="w-full h-48 object-cover mb-4 rounded"
+                className="w-full h-40 object-contain mb-2"
               />
             )}
-            <h2 className="text-xl font-semibold mb-2">{product.title}</h2>
-            <p className="text-gray-600 text-sm mb-4">{product.description}</p>
-            <div className="font-bold">
-              {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
+            <h2 className="text-md font-semibold mb-1">{product.title}</h2>
+            {/* Hier später: ⭐⭐⭐⭐⭐ (Bewertungen) */}
+            <div className="text-lg font-bold mb-1">
+              {product.priceRange.minVariantPrice.amount}{" "}
+              {product.priceRange.minVariantPrice.currencyCode}
             </div>
+            <div className="text-gray-500 text-xs mb-3">inkl. Lieferung</div>
+            <button className="mt-auto bg-[#005eb8] text-white py-2 rounded-lg hover:bg-blue-700 transition">
+              In den Einkaufswagen
+            </button>
           </div>
         ))}
       </div>

@@ -19,3 +19,24 @@ export type LoginResponse = {
   };
   error?: string;
 };
+
+export type Product = {
+  id: string;
+  title: string;
+  description: string;
+  handle: string;
+  images: {
+    edges: {
+      node: {
+        url: string;
+        altText: string | null;
+      };
+    }[];
+  };
+  priceRange: {
+    minVariantPrice: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+};
