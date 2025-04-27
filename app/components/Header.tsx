@@ -40,7 +40,8 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     try {
       localStorage.clear();
       await fetch("/api/logout", { method: "POST" });
-      revalidator.revalidate();
+      localStorage.setItem("sb-is-logged-in", "false");
+      window.dispatchEvent(new Event("storage"));      
     } catch (error) {
       console.error("Fehler beim Logout:", error);
       revalidator.revalidate();

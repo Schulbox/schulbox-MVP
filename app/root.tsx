@@ -345,7 +345,6 @@ export default function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
-  
       try {
         if (typeof window === "undefined" || !window.localStorage) {
           console.log("[App] localStorage nicht verfügbar");
@@ -395,44 +394,18 @@ export default function App() {
   
     initializeAuth();
   
-    // 👇🏼 Jetzt NEU: Automatisch reaktiv bei LocalStorage-Änderung:
+    // --- NEU: bei JEDER Änderung von localStorage sofort updaten
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "sb-is-logged-in") {
-        console.log("[App] LocalStorage Änderung erkannt:", event.key, event.newValue);
-        initializeAuth(); // ← Reagiere darauf und aktualisiere
+      if (event.key && (event.key.startsWith('sb-') || event.key === 'user-profile-cache' || event.key === 'sb-is-logged-in')) {
+        console.log("[App] Storage-Änderung erkannt:", event.key, event.newValue);
+        initializeAuth();
       }
     };
   
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [initializeSupabase, fetchUserData]);
   
-
-  // Überwache Änderungen am localStorage
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'sb-is-logged-in') {
-        console.log("[App] localStorage-Änderung erkannt:", event.key, event.newValue);
-        
-        if (event.newValue === 'true') {
-          // Benutzer hat sich eingeloggt
-          revalidator.revalidate();
-        } else if (event.newValue === null || event.newValue !== 'true') {
-          // Benutzer hat sich ausgeloggt
-          setIsLoggedIn(false);
-          setUser(null);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [revalidator]);
-
   return (
     <html lang="de">
       <head>
