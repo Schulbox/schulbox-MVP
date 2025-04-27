@@ -118,34 +118,32 @@ export default function Webshop() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-  {filteredProducts.map((product: Product) => (
-    <div
-      key={product.id}
-      className="border rounded-lg p-3 shadow hover:shadow-md transition flex flex-col"
-    >
-      <Link to={`/webshop/${product.handle}`} className="flex flex-col flex-1">
-        {product.images.edges[0]?.node.url && (
-          <img
-            src={product.images.edges[0].node.url}
-            alt={product.images.edges[0].node.altText || product.title}
-            className="w-full h-40 object-contain mb-2"
-          />
-        )}
-        <h2 className="text-md font-semibold mb-1 text-gray-800">{product.title}</h2>
-      </Link>
-
-      <div className="text-lg font-bold mb-1">
-        {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
-      </div>
-      <div className="text-gray-500 text-xs mb-3">inkl. Lieferung</div>
-
-      <button className="mt-auto bg-[#005eb8] text-white py-2 rounded-lg hover:bg-blue-700 transition">
-        In den Einkaufswagen
-      </button>
-    </div>
-  ))}
-</div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredProducts.map((product: Product) => (
+            <div
+              key={product.id}
+              className="border rounded-lg p-3 shadow hover:shadow-md transition flex flex-col"
+            >
+              <Link to={`/webshop/${product.handle}`}>
+                {product.images.edges[0]?.node.url && (
+                  <img
+                    src={product.images.edges[0].node.url}
+                    alt={product.images.edges[0].node.altText || product.title}
+                    className="w-full h-40 object-contain mb-2"
+                  />
+                )}
+                <h2 className="text-md font-semibold mb-1">{product.title}</h2>
+              </Link>
+              <div className="text-lg font-bold mb-1">
+                {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
+              </div>
+              <div className="text-gray-500 text-xs mb-3">inkl. Lieferung</div>
+              <button className="mt-auto bg-[#005eb8] text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                In den Einkaufswagen
+              </button>
+            </div>
+          ))}
+        </div>
 
     </div>
   );

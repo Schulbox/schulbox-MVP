@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { fetchFromShopify } from "~/lib/shopify/shopifyClient.server"; // Falls du einen Client hast, oder sonst direkt fetch verwenden
+
+export const handle = { breadcrumb: false };
 
 export async function loader({ params }: { params: { handle: string } }) {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
@@ -37,6 +38,11 @@ export async function loader({ params }: { params: { handle: string } }) {
   });
 
   const result = await response.json();
+
+  if (!result.data.productByHandle) {
+    throw new Response("Produkt nicht gefunden", { status: 404 });
+  }
+
   return json(result.data.productByHandle);
 }
 
