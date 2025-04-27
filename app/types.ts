@@ -10,3 +10,12 @@ export type User = {
   role?: UserRole;
   email: string;
 } | null;
+
+export type LoginResponse = {
+  success?: boolean;
+  tokens?: {
+    refresh_token: string;
+    access_token: string;
+  };
+  error?: string;
+};

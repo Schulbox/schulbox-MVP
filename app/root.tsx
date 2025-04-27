@@ -345,52 +345,45 @@ export default function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
-      
+  
       try {
-        // Prüfe, ob localStorage verfügbar ist
-        if (typeof window === 'undefined' || !window.localStorage) {
+        if (typeof window === "undefined" || !window.localStorage) {
           console.log("[App] localStorage nicht verfügbar");
           setIsLoggedIn(false);
           setUser(null);
           setIsLoading(false);
           return;
         }
-
-        // Prüfe, ob der Benutzer eingeloggt ist (localStorage-Flag)
-        const isLoggedInFlag = localStorage.getItem('sb-is-logged-in');
-        if (isLoggedInFlag !== 'true') {
+  
+        const isLoggedInFlag = localStorage.getItem("sb-is-logged-in");
+  
+        if (isLoggedInFlag === "true") {
+          console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
+  
+          const supabase = initializeSupabase();
+          if (!supabase) {
+            console.log("[App] Supabase konnte nicht initialisiert werden");
+            setIsLoggedIn(false);
+            setUser(null);
+            setIsLoading(false);
+            return;
+          }
+  
+          const userData = await fetchUserData(supabase);
+          if (userData) {
+            console.log("[App] Benutzerdaten geladen:", userData);
+            setUser(userData);
+            setIsLoggedIn(true);
+          } else {
+            console.log("[App] Keine Benutzerdaten gefunden");
+            setUser(null);
+            setIsLoggedIn(true); // eingeloggt ohne Profil
+          }
+        } else {
           console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
           setIsLoggedIn(false);
           setUser(null);
-          setIsLoading(false);
-          return;
         }
-
-        console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
-        
-        // Initialisiere Supabase
-        const supabase = initializeSupabase();
-        if (!supabase) {
-          console.log("[App] Supabase konnte nicht initialisiert werden");
-          setIsLoggedIn(false);
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-
-        // Lade Benutzerdaten
-        const userData = await fetchUserData(supabase);
-        if (!userData) {
-          console.log("[App] Keine Benutzerdaten gefunden");
-          setIsLoggedIn(true); // Trotzdem eingeloggt, nur ohne Profildaten
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-
-        console.log("[App] Benutzerdaten geladen:", userData);
-        setIsLoggedIn(true);
-        setUser(userData);
       } catch (error) {
         console.error("[App] Fehler bei der Authentifizierung:", error);
         setIsLoggedIn(false);
@@ -399,9 +392,23 @@ export default function App() {
         setIsLoading(false);
       }
     };
-
+  
     initializeAuth();
+  
+    // 👇🏼 Jetzt NEU: Automatisch reaktiv bei LocalStorage-Änderung:
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "sb-is-logged-in") {
+        console.log("[App] LocalStorage Änderung erkannt:", event.key, event.newValue);
+        initializeAuth(); // ← Reagiere darauf und aktualisiere
+      }
+    };
+  
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, [initializeSupabase, fetchUserData]);
+  
 
   // Überwache Änderungen am localStorage
   useEffect(() => {
