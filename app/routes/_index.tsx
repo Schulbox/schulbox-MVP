@@ -4,7 +4,7 @@ export default function Index() {
   return (
     <div className="text-center px-4 py-6">
       <section className="py-12">
-        <h1 className="text-2xl md:text-3xl font-bold text-center mb-4 transition-all duration-500 ease-in-out">
+        <h1 className="text-2xl md:text-3xl font-bold text-center mb-4 transition-all duration-500 ease-in-out text-black">
           📦 Schulbox – Dein Schulstart mit einem Klick
         </h1>
         <p className="text-gray-600 max-w-xl mx-auto mb-4 text-sm md:text-base">
@@ -22,7 +22,7 @@ export default function Index() {
       </section>
 
       <section className="py-12 bg-white md:bg-gray-50">
-        <h2 className="text-2xl md:text-3xl font-semibold mb-10 transition-all duration-500 ease-in-out">
+        <h2 className="text-2xl md:text-3xl font-semibold mb-10 transition-all duration-500 ease-in-out text-black">
           Warum Schulbox?
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -48,7 +48,7 @@ export default function Index() {
       </section>
 
       <section className="py-12">
-        <h2 className="text-2xl md:text-3xl font-semibold mb-6 transition-all duration-500 ease-in-out">
+        <h2 className="text-2xl md:text-3xl font-semibold mb-6 transition-all duration-500 ease-in-out text-black">
           Über Schulbox
         </h2>
         <p className="text-gray-600 max-w-3xl mx-auto text-sm md:text-base">

@@ -463,7 +463,7 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="bg-gray-50 min-h-screen">
+      <body className="bg-gray-50 min-h-screen text-black">
         <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
         <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
         <ScrollRestoration />

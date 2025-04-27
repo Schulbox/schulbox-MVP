@@ -120,9 +120,6 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-700 ml-6">
           <Link to="/webshop" className="hover:text-blue-600">Webshop</Link>
           <Link to="/schulboxen" className="hover:text-blue-600">Schulboxen</Link>
-          {isTeacher && (
-            <Link to="/konfigurator" className="hover:text-blue-600 text-blue-700 font-semibold">Box Konfigurator</Link>
-          )}
           <Link to="/ueber-uns" className="hover:text-blue-600">Über uns</Link>
         </nav>
 
@@ -251,7 +248,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
         leaveFrom="translate-x-0 opacity-100"
         leaveTo="translate-x-full opacity-0"
       >
-        <div ref={mobileMenuRef} className="fixed inset-0 bg-white z-40 px-8 py-8 flex flex-col gap-6 text-lg font-medium text-gray-700 overflow-auto">
+        <div ref={mobileMenuRef} className="fixed top-0 right-0 h-full w-64 bg-white z-40 px-8 py-8 flex flex-col gap-6 text-lg font-medium text-gray-700 overflow-auto rounded-l-2xl">
           <button 
             onClick={() => setMobileMenuOpen(false)} 
             className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
