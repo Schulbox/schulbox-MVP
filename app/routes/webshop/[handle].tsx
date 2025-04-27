@@ -37,8 +37,9 @@ export async function loader({ params }: { params: { handle: string } }) {
           }
         }
       `,
-      variables: { handle: params.handle },
-    }),
+      variables: { handle: params.handle }
+    })
+    ,
   });
 
   const result = await response.json();
