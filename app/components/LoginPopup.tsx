@@ -3,35 +3,50 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRevalidator, useFetcher } from "@remix-run/react"; // <-- fetcher statt useActionData
 import { LoginResponse } from "~/types";
+import { useOutletContext } from "@remix-run/react";
+
+type OutletContextType = {
+    user: User | null;
+    isLoggedIn: boolean;
+    isLoading: boolean;
+    refreshAuth: () => Promise<void>; // 👈🏻 Funktion, die wir gleich übergeben
+  };
+
+  type User = {
+    email?: string;
+    role?: string;
+    vorname?: string;
+    nachname?: string;
+  } | null;  
 
 export default function LoginPopup({ onClose }: { onClose: () => void }) {
   const fetcher = useFetcher<LoginResponse>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const revalidator = useRevalidator();
+  const { refreshAuth } = useOutletContext<OutletContextType>();
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    setIsSubmitting(true);
-    setTimeout(() => setIsSubmitting(false), 1000);
-  };
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data?.tokens) {
-      // Tokens im localStorage speichern
+      // Tokens speichern
       localStorage.setItem('sb-refresh-token', fetcher.data.tokens.refresh_token);
       localStorage.setItem('sb-access-token', fetcher.data.tokens.access_token);
       localStorage.setItem('sb-auth-timestamp', Date.now().toString());
       localStorage.setItem('sb-is-logged-in', 'true');
-  
+
       console.log("[LoginPopup] Tokens erfolgreich im localStorage gespeichert");
-  
-      // Jetzt revalidieren
+
+      // Supabase-Session auf Server refreshen
+      refreshAuth(); // <-- hier neu dazu
       window.dispatchEvent(new Event("storage"));
-  
-      // Und Popup schließen
+
       onClose();
     }
-  }, [fetcher.data, revalidator, onClose]);
-  
+  }, [fetcher.data, refreshAuth, onClose]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    setIsSubmitting(true);
+  };
+
   return (
     <AnimatePresence>
       <motion.div

@@ -17,6 +17,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
 import Header from "~/components/Header";
 import "~/styles/tailwind.css"; // oder dein korrekter Pfad
+import { useOutletContext } from "@remix-run/react";
 
 
 // Typ für den Benutzer
@@ -26,6 +27,14 @@ type User = {
   vorname?: string;
   nachname?: string;
 } | null;
+
+type OutletContextType = {
+  user: User | null;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  refreshAuth: () => Promise<void>; // 👈🏻 Funktion, die wir gleich übergeben
+};
+
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Erstelle Supabase-Client
@@ -341,6 +350,56 @@ export default function App() {
     }
   }, []);
 
+  async function initializeAuth() {
+    setIsLoading(true);
+    try {
+      if (typeof window === "undefined" || !window.localStorage) {
+        console.log("[App] localStorage nicht verfügbar");
+        setIsLoggedIn(false);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+  
+      const isLoggedInFlag = localStorage.getItem("sb-is-logged-in");
+  
+      if (isLoggedInFlag === "true") {
+        console.log("[App] Benutzer ist eingeloggt (localStorage-Flag)");
+  
+        const supabase = initializeSupabase();
+        if (!supabase) {
+          console.log("[App] Supabase konnte nicht initialisiert werden");
+          setIsLoggedIn(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+  
+        const userData = await fetchUserData(supabase);
+        if (userData) {
+          console.log("[App] Benutzerdaten geladen:", userData);
+          setUser(userData);
+          setIsLoggedIn(true);
+        } else {
+          console.log("[App] Keine Benutzerdaten gefunden");
+          setUser(null);
+          setIsLoggedIn(true); // eingeloggt ohne Profil
+        }
+      } else {
+        console.log("[App] Benutzer ist nicht eingeloggt (localStorage-Flag)");
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("[App] Fehler bei der Authentifizierung:", error);
+      setIsLoggedIn(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  
+
   // Initialisiere Authentifizierung
   useEffect(() => {
     const initializeAuth = async () => {
@@ -406,6 +465,9 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [initializeSupabase, fetchUserData]);
   
+  const refreshAuth = initializeAuth;
+
+
   return (
     <html lang="de">
       <head>
@@ -416,7 +478,7 @@ export default function App() {
       </head>
       <body>
         <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
-        <Outlet context={{ user, isLoggedIn, isLoading }} />
+        <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth, initializeAuth }} />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
