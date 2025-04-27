@@ -45,8 +45,10 @@ export async function loader({ params }: { params: { handle: string } }) {
   const result = await response.json();
 
   if (!result.data || !result.data.productByHandle) {
+    console.log("FEHLER BEI DER SHOPIFY-ANTWORT:", JSON.stringify(result, null, 2));
     throw new Response("Produkt nicht gefunden", { status: 404 });
   }
+  
 
   return json(result.data.productByHandle);
 }
