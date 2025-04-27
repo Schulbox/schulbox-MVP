@@ -1,15 +1,14 @@
 // app/routes/webshop.tsx
 import { useParams, useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
-import { useEffect, useState } from "react";
 
-// Loader, um das Produkt mit dem Handle aus der URL zu laden
+// Loader für das Produkt anhand des Handles
 export async function loader({ params }: { params: { handle: string } }) {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
+      "X-Shopify-Stoerfront-Access-Token": process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
     },
     body: JSON.stringify({
       query: `
@@ -46,8 +45,7 @@ export async function loader({ params }: { params: { handle: string } }) {
   return json(result.data.productByHandle);
 }
 
-// Hauptkomponente zur Darstellung des Produkts
-export default function ProductPage() {
+export default function ProductDetailPage() {
   const product = useLoaderData<typeof loader>();
 
   return (
