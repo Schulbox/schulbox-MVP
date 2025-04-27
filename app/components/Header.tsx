@@ -32,7 +32,10 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const logoutFetcher = useFetcher(); // Fetcher für Logout
-  const { refreshAuth } = useOutletContext<OutletContextType>();
+  
+  // Sicheres Abrufen des Outlet-Kontexts mit Fallback
+  const outletContext = useOutletContext<OutletContextType | null>();
+  const refreshAuth = outletContext?.refreshAuth;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -63,9 +66,15 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     // Server-seitige Session löschen (Cookies)
     logoutFetcher.submit(null, { method: "post", action: "/logout" });
     
-    // Direkt refreshAuth aufrufen, um den Authentifizierungsstatus sofort zu aktualisieren
-    await refreshAuth();
-    console.log("[Logout] Auth-Status aktualisiert");
+    // Direkt refreshAuth aufrufen, wenn verfügbar
+    if (refreshAuth) {
+      try {
+        await refreshAuth();
+        console.log("[Logout] Auth-Status aktualisiert");
+      } catch (error) {
+        console.error("[Logout] Fehler beim Aktualisieren des Auth-Status:", error);
+      }
+    }
     
     // UI sofort aktualisieren
     revalidator.revalidate();

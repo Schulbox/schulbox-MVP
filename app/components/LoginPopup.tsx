@@ -34,7 +34,10 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const popupRef = useRef<HTMLDivElement>(null);
   const revalidator = useRevalidator();
-  const { refreshAuth } = useOutletContext<OutletContextType>();
+  
+  // Sicheres Abrufen des Outlet-Kontexts mit Fallback
+  const outletContext = useOutletContext<OutletContextType | null>();
+  const refreshAuth = outletContext?.refreshAuth;
 
   // Schließen beim Klicken außerhalb des Popups
   useEffect(() => {
@@ -73,18 +76,26 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
       console.log("[LoginPopup] Tokens erfolgreich im localStorage gespeichert");
 
       // Manuell refreshAuth aufrufen, um den Authentifizierungsstatus sofort zu aktualisieren
-      refreshAuth().then(() => {
-        console.log("[LoginPopup] Auth-Status aktualisiert");
-        
-        // Zusätzlich revalidate aufrufen, um sicherzustellen, dass die UI aktualisiert wird
+      if (refreshAuth) {
+        refreshAuth().then(() => {
+          console.log("[LoginPopup] Auth-Status aktualisiert");
+          
+          // Zusätzlich revalidate aufrufen, um sicherzustellen, dass die UI aktualisiert wird
+          revalidator.revalidate();
+          
+          // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
+          window.dispatchEvent(new Event("storage"));
+          
+          // Popup schließen
+          onClose();
+        });
+      } else {
+        // Fallback, wenn refreshAuth nicht verfügbar ist
+        console.log("[LoginPopup] refreshAuth nicht verfügbar, verwende Fallback");
         revalidator.revalidate();
-        
-        // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
         window.dispatchEvent(new Event("storage"));
-        
-        // Popup schließen
         onClose();
-      });
+      }
     } else if (fetcher.data?.error) {
       setIsSubmitting(false);
     }
