@@ -9,7 +9,7 @@ export async function loader() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Stoerfront-Access-Token": process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
+      "X-Shopify-Storefront-Access-Token": process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
     },
     body: JSON.stringify({
       query: `{
@@ -40,8 +40,15 @@ export async function loader() {
   });
 
   const result = await response.json();
+
+  if (!result.data || !result.data.products) {
+    console.error("Fehler beim Laden der Produkte:", result);
+    throw new Response("Produkte konnten nicht geladen werden", { status: 500 });
+  }
+
   return json(result.data.products.edges.map((edge: any) => edge.node));
 }
+
 
 export default function Webshop() {
   const products = useLoaderData<typeof loader>();
