@@ -1,0 +1,9 @@
+{
+    "rewrites": [
+      {
+        "source": "/webshop/:slug*",
+        "destination": "/webshop/$slug"
+      }
+    ]
+  }
+  

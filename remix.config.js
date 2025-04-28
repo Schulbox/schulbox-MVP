@@ -1,6 +1,3 @@
-/**
- * @type {import('@remix-run/dev').AppConfig}
- */
 export default {
   future: {
     v2_routeConvention: true,
@@ -10,6 +7,4 @@ export default {
   },
   ignoredRouteFiles: ["**/.*"],
   serverModuleFormat: "esm",
-  serverBuildPath: "build/index.js", // WICHTIG: korrekt angeben für Vercel
-  publicPath: "/build/", // WICHTIG: Assets richtig ausliefern
 };

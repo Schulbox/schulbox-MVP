@@ -1,18 +1,12 @@
-import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
+import { vitePlugin as remix } from "@remix-run/dev";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { vercelPreset } from "@vercel/remix/vite"; // WICHTIG: Vercel Preset laden
-
-declare module "@remix-run/node" {
-  interface Future {
-    v3_singleFetch: true;
-  }
-}
+import { vercelPreset } from "@vercel/remix/vite";
 
 export default defineConfig({
   plugins: [
     remix({
-      ...vercelPreset(), // WICHTIG: preset rein
+      ...vercelPreset(),
       future: {
         v3_fetcherPersist: true,
         v3_relativeSplatPath: true,
@@ -24,7 +18,7 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   define: {
-    'process.env.SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
-    'process.env.SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY),
+    "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL),
+    "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY),
   },
 });
