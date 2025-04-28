@@ -40,20 +40,21 @@ export async function loader({ params }: { params: { slug: string | string[] } }
         }
       `,
       variables: { handle: slug }
-    })
-    ,
+    }),
   });
 
   const result = await response.json();
 
+  console.log("Shopify API Antwort:", JSON.stringify(result, null, 2));
+
   if (!result.data || !result.data.productByHandle) {
-    console.log("FEHLER BEI DER SHOPIFY-ANTWORT:", JSON.stringify(result, null, 2));
+    console.error("Produkt nicht gefunden oder Shopify-Fehler:", JSON.stringify(result, null, 2));
     throw new Response("Produkt nicht gefunden", { status: 404 });
   }
-  
 
   return json(result.data.productByHandle);
 }
+
 
 export default function ProductDetailPage() {
   const product = useLoaderData<typeof loader>();
