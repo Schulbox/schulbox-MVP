@@ -3,8 +3,8 @@ import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
 // Loader für ein einzelnes Produkt anhand des Handles
-export async function loader({ params }: { params: { handle: string } }) {
-  if (!params.handle) {
+export async function loader({ params }: { params: { slug: string } }) {
+  if (!params.slug) {
     throw new Response("Kein Produkt-Handle angegeben", { status: 400 });
   }
 
@@ -37,7 +37,7 @@ export async function loader({ params }: { params: { handle: string } }) {
           }
         }
       `,
-      variables: { handle: params.handle }
+      variables: { handle: params.slug }
     })
     ,
   });
