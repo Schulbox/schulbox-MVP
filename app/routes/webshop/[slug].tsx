@@ -21,7 +21,7 @@ export async function loader({ params }: { params: { slug: string | string[] } }
         query getProductByHandle($handle: String!) {
           productByHandle(handle: $handle) {
             title
-            description
+            descriptionHtml
             images(first: 5) {
               edges {
                 node {
@@ -78,7 +78,7 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="text-gray-600 mb-8 whitespace-pre-line">
-          {product.description}
+          {product.descriptionHtml}
         </div>
 
         <button className="bg-[#005eb8] hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full text-lg transition">
