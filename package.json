@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",
+    "@remix-run/express": "^2.16.5",
     "@remix-run/node": "^2.16.5",
     "@remix-run/react": "^2.16.5",
     "@remix-run/serve": "^2.16.5",
@@ -21,6 +22,7 @@
     "@vanilla-extract/integration": "^8.0.1",
     "esbuild": "^0.25.3",
     "estree-util-value-to-estree": "^3.3.3",
+    "express": "^4.21.2",
     "framer-motion": "^12.9.2",
     "isbot": "^4.1.0",
     "lucide-react": "^0.503.0",
@@ -31,6 +33,7 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.16.5",
+    "@types/express": "^5.0.1",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
