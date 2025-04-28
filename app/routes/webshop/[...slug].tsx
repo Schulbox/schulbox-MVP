@@ -3,9 +3,11 @@ import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
 // Loader für ein einzelnes Produkt anhand des Handles
-export async function loader({ params }: { params: { slug: string } }) {
-  if (!params.slug) {
-    throw new Response("Kein Produkt-Handle angegeben", { status: 400 });
+export async function loader({ params }: { params: { slug: string | string[] } }) {
+  const slug = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : params.slug;
+
+  if (!slug) {
+    throw new Response("Kein Produkt-Slug angegeben", { status: 400 });
   }
 
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
@@ -37,7 +39,7 @@ export async function loader({ params }: { params: { slug: string } }) {
           }
         }
       `,
-      variables: { handle: params.slug }
+      variables: { handle: slug }
     })
     ,
   });
