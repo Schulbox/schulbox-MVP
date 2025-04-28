@@ -2,9 +2,13 @@
 import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
+console.log("🛠️ $slug.tsx wird geladen...");
+
+
 // Loader für ein einzelnes Produkt anhand des Handles
 export async function loader({ params }: { params: { slug: string } }) {
   const { slug } = params;
+  console.log("🛠️ $slug.tsx wird geladen...");
 
   if (!slug) {
     throw new Response("Kein Produkt-Slug angegeben", { status: 400 });
