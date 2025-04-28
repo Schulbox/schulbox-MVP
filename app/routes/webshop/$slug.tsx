@@ -1,4 +1,4 @@
-// app/routes/webshop/[handle].tsx
+// app/routes/webshop/$slug.tsx
 import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
