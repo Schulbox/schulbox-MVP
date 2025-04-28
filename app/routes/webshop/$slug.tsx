@@ -3,8 +3,8 @@ import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
 // Loader für ein einzelnes Produkt anhand des Handles
-export async function loader({ params }: { params: { slug: string | string[] } }) {
-  const slug = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : params.slug;
+export async function loader({ params }: { params: { slug: string } }) {
+  const { slug } = params;
 
   if (!slug) {
     throw new Response("Kein Produkt-Slug angegeben", { status: 400 });
@@ -39,7 +39,7 @@ export async function loader({ params }: { params: { slug: string | string[] } }
           }
         }
       `,
-      variables: { handle: slug }
+      variables: { handle: slug },
     }),
   });
 
