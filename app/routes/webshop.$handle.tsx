@@ -6,11 +6,11 @@ console.log("🛠️ $slug.tsx wird geladen...");
 
 
 // Loader für ein einzelnes Produkt anhand des Handles
-export async function loader({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+export async function loader({ params }: { params: { handle: string } }) {
+  const { handle } = params;
   console.log("🛠️ $slug.tsx wird geladen...");
 
-  if (!slug) {
+  if (!handle) {
     throw new Response("Kein Produkt-Slug angegeben", { status: 400 });
   }
 
@@ -43,7 +43,7 @@ export async function loader({ params }: { params: { slug: string } }) {
           }
         }
       `,
-      variables: { handle: slug },
+      variables: { handle: handle },
     }),
   });
 
