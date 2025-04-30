@@ -7,6 +7,59 @@ import { User, ShoppingCart, Menu, X, ChevronDown } from "lucide-react";
 import LoginPopup from "./LoginPopup";
 import { useRevalidator, useFetcher } from "@remix-run/react";
 import { useOutletContext } from "@remix-run/react";
+import { useCart } from "~/context/CartContext";
+import {
+  HomeIcon,
+  BoxIcon,
+  InfoIcon,
+  ConfigIcon,
+  CartIcon,
+  UserIcon,
+  LogoutIcon,
+  LoginIcon,
+  RegisterIcon,
+  UserGroupIcon,
+  ToolboxIcon,
+} from "~/components/icons";
+
+
+const NavItem = ({
+  icon: Icon,
+  label,
+  to,
+  onClick,
+  className = "",
+}: {
+  icon: React.ElementType;
+  label: string;
+  to?: string;
+  onClick?: () => void;
+  className?: string;
+}) => {
+  const baseClass =
+    "flex items-center gap-3 px-2 py-2 rounded hover:bg-gray-200 transition w-full text-left";
+  const combinedClass = `${baseClass} ${className}`;
+
+  if (to) {
+    return (
+      <Link to={to} className={combinedClass}>
+        <Icon className="w-5 h-5 text-gray-400" />
+        <span>{label}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={combinedClass}>
+      <Icon className="w-5 h-5 text-gray-400" />
+      <span>{label}</span>
+    </button>
+  );
+};
+
+
+
+
 
 // Typdefinition
 export type UserType = {
@@ -32,7 +85,9 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const logoutFetcher = useFetcher(); // Fetcher für Logout
-  
+  const { totalItems, justAdded, setItems, clearCart } = useCart();
+
+
   // Sicheres Abrufen des Outlet-Kontexts mit Fallback
   const outletContext = useOutletContext<OutletContextType | null>();
   const refreshAuth = outletContext?.refreshAuth;
@@ -54,6 +109,10 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     setUserMenuOpen(false); // Dropdown schließen
     setMobileMenuOpen(false); // Mobile Menü schließen
     
+     // 🧹 Warenkorb lokal leeren
+     clearCart();     // ⛔ Supabase-Speichern blockieren
+  sessionStorage.removeItem("cart-synced");
+    
     // Client-seitige Bereinigung
     localStorage.removeItem("sb-refresh-token");
     localStorage.removeItem("sb-access-token");
@@ -63,6 +122,8 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     localStorage.setItem("sb-is-logged-in", "false");
     console.log("[Logout] localStorage bereinigt");
     
+    
+
     // Server-seitige Session löschen (Cookies)
     logoutFetcher.submit(null, { method: "post", action: "/logout" });
     
@@ -70,7 +131,12 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     if (refreshAuth) {
       try {
         await refreshAuth();
-        console.log("[Logout] Auth-Status aktualisiert");
+    
+        // Nach erfolgreichem Logout: cart leeren
+        setTimeout(() => {
+          clearCart(); // <- aus CartContext
+          console.log("[Logout] Cart geleert nach Logout");
+        }, 300);
       } catch (error) {
         console.error("[Logout] Fehler beim Aktualisieren des Auth-Status:", error);
       }
@@ -81,6 +147,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     
     // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
     window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("auth-changed"));
   };
 
   // Benutzeranzeigename bestimmen
@@ -223,80 +290,104 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
           )}
 
           {/* Warenkorb Icon */}
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} className="cursor-pointer ml-2">
-            <Link to="/cart">
-              <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-blue-600" />
-            </Link>
-          </motion.div>
-
-          {/* Mobile Menü Button */}
-          <div className="block md:hidden">
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menü */}
-      <Transition
-        show={mobileMenuOpen}
-        enter="transition ease-out duration-300"
-        enterFrom="translate-x-full opacity-0"
-        enterTo="translate-x-0 opacity-100"
-        leave="transition ease-in duration-200"
-        leaveFrom="translate-x-0 opacity-100"
-        leaveTo="translate-x-full opacity-0"
+          <motion.div
+  whileHover={{ scale: 1.1 }}
+  whileTap={{ scale: 0.95 }}
+  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+  className="cursor-pointer ml-2 relative"
+>
+  <Link to="/warenkorb">
+    <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-blue-600" />
+    {totalItems > 0 && (
+      <motion.div
+        key={totalItems} 
+        initial={{ scale: 1 }}
+        animate={{ scale: justAdded ? [1.3, 1.1, 1] : 1 }}
+        transition={{ duration: 0.3 }}
+        className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow"
       >
-        <div ref={mobileMenuRef} className="fixed top-0 right-0 h-full w-64 bg-white z-40 px-8 py-8 flex flex-col gap-6 text-lg font-medium text-gray-700 overflow-auto rounded-l-2xl">
-          <button 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            aria-label="Menü schließen"
-          >
-            <X size={24} />
-          </button>
-          
-          <div className="mt-10 space-y-4">
-            {isLoggedIn && user && (
-              <div className="mb-4 pb-4 border-b">
-                <p className="text-sm font-medium text-gray-900">Hallo, {userDisplayName}</p>
-                <p className="text-sm text-gray-600 truncate">{user.email}</p>
-              </div>
-            )}
-            
-            {isLoggedIn && (
-              <>
-                <Link to="/profil" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Profil bearbeiten</Link>
-                <Link to="/bestellungen" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Meine Bestellungen</Link>
-              </>
-            )}
-            <Link to="/webshop" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Webshop</Link>
-            <Link to="/schulboxen" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Schulboxen</Link>
-            {isTeacher && (
-              <Link to="/konfigurator" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600 text-blue-700 font-semibold">Box Konfigurator</Link>
-            )}
-            <Link to="/ueber-uns" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Über uns</Link>
-            <hr />
-            {isLoggedIn ? (
-              <button onClick={handleLogout} className="text-red-600 text-left w-full hover:text-red-700">Ausloggen</button>
-            ) : (
-              <>
-                <button onClick={() => { setLoginPopupOpen(true); setMobileMenuOpen(false); }} className="block hover:text-blue-600">Einloggen</button>
-                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Registrieren</Link>
-              </>
-            )}
-          </div>
-          
-          <div className="mt-auto text-sm text-gray-500 space-y-1">
-            <Link to="/impressum" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Impressum</Link>
-            <Link to="/datenschutz" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Datenschutz</Link>
-            <Link to="/agb" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">AGB</Link>
-            <Link to="/widerruf" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Widerruf</Link>
-            <Link to="/kontakt" onClick={() => setMobileMenuOpen(false)} className="block hover:text-blue-600">Kontakt</Link>
-          </div>
-        </div>
-      </Transition>
+        {totalItems}
+      </motion.div>
+    )}
+  </Link>
+</motion.div>
+
+              {/* Mobile Menü Button */}
+{/* Hamburger-Button */}
+<div className="block md:hidden">
+  <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+    <motion.div
+      initial={false}
+      animate={{ rotate: mobileMenuOpen ? 360 : 0 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+      className="w-6 h-6 flex items-center justify-center"
+    >
+      <Menu className="w-6 h-6 text-gray-600" />
+    </motion.div>
+  </button>
+</div>
+</div>
+</div>
+
+{/* Mobile Menü – ohne <Transition> */}
+<div
+  className={`fixed top-0 right-0 h-full z-[999] bg-gray-100 shadow-xl rounded-l-2xl transform transition-transform duration-300 ease-in-out ${
+    mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+  } w-fit max-w-[300px]`}
+>
+  {/* Blauer Kopfbereich */}
+  <div className="bg-blue-100 px-6 py-6 rounded-t-2xl shadow-md relative">
+    {user && (
+      <p className="text-sm text-center">
+        <span className="text-green-600 font-semibold">Hallo</span>{" "}
+        <span className="text-gray-800 font-semibold">{user.vorname}</span>
+      </p>
+    )}
+    <button
+      onClick={() => setMobileMenuOpen(false)}
+      className="absolute top-4 right-4"
+    >
+      <motion.div
+        initial={false}
+        animate={{ rotate: mobileMenuOpen ? 360 : 0 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        className="w-6 h-6 flex items-center justify-center"
+      >
+        <Menu className="w-6 h-6 text-gray-600" />
+      </motion.div>
+    </button>
+  </div>
+
+  {/* Navigation */}
+  <div className="h-full px-6 py-6 flex flex-col justify-between text-base text-gray-800">
+    <nav className="space-y-2 font-medium">
+      <NavItem icon={HomeIcon} label="Webshop" to="/webshop" onClick={() => setMobileMenuOpen(false)} />
+      <NavItem icon={BoxIcon} label="Schulboxen" to="/schulboxen" onClick={() => setMobileMenuOpen(false)} />
+      <NavItem icon={UserGroupIcon} label="Über uns" to="/ueber-uns" onClick={() => setMobileMenuOpen(false)} />
+      {isTeacher && (
+        <NavItem icon={ToolboxIcon} label="Box Konfigurator" to="/konfigurator" onClick={() => setMobileMenuOpen(false)} />
+      )}
+      {isLoggedIn && (
+        <>
+          <hr className="my-2 border-gray-300" />
+          <NavItem icon={UserIcon} label="Profil bearbeiten" to="/profil" onClick={() => setMobileMenuOpen(false)} />
+          <NavItem icon={CartIcon} label="Meine Bestellungen" to="/bestellungen" onClick={() => setMobileMenuOpen(false)} />
+          <hr className="my-2 border-gray-300" />
+          <NavItem icon={LogoutIcon} label="Ausloggen" onClick={handleLogout} className="text-red-600 hover:text-red-700" />
+        </>
+      )}
+      {!isLoggedIn && (
+        <>
+          <hr className="my-2 border-gray-300" />
+          <NavItem icon={LoginIcon} label="Einloggen" onClick={() => { setLoginPopupOpen(true); setMobileMenuOpen(false); }} />
+          <NavItem icon={RegisterIcon} label="Registrieren" to="/register" onClick={() => setMobileMenuOpen(false)} />
+        </>
+      )}
+    </nav>
+  </div>
+</div>
+
+
 
       {/* Desktop Login Popup */}
       {loginPopupOpen && <LoginPopup onClose={() => setLoginPopupOpen(false)} />}

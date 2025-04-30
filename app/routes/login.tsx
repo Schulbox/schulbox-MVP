@@ -85,6 +85,8 @@ export default function Login() {
         localStorage.setItem('sb-is-logged-in', 'true');
         console.log("[Login] Tokens erfolgreich im localStorage gespeichert");
 
+        // 🔔 Custom Event auslösen für alle anderen Komponenten
+        window.dispatchEvent(new Event("auth-changed"));
         // Seite neu validieren (user, isLoggedIn etc. wird neu geladen)
         revalidator.revalidate();
 

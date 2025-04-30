@@ -1,5 +1,6 @@
 // app/root.tsx
 import { useEffect, useState, useCallback } from "react";
+import { CartProvider } from "./context/CartContext"; // oben importieren
 import {
   Links,
   LiveReload,
@@ -18,6 +19,8 @@ import { getSupabaseTokensFromSession } from "~/lib/session.server";
 import Header from "~/components/Header";
 import "~/styles/tailwind.css"; // oder dein korrekter Pfad
 import { useOutletContext } from "@remix-run/react";
+import { triggerCartSync } from "./context/CartContext";
+import Footer from "~/components/footer";
 
 
 // Typ für den Benutzer
@@ -171,6 +174,9 @@ export default function App() {
         return null;
       }
       
+      localStorage.setItem("sb-user-id", authData.user.id);
+
+
       if (!authData.user) {
         console.error("[App] Kein Benutzer gefunden");
         return null;
@@ -402,6 +408,12 @@ export default function App() {
           console.log("[refreshAuth] Benutzerdaten geladen:", userData);
           setUser(userData);
           setIsLoggedIn(true);
+          setTimeout(() => {
+            triggerCartSync();
+          }, 100); // Vermeidet Race Condition
+          
+          // NICHT erneut "storage" triggern → sonst Endlosschleife
+          
         } else {
           console.log("[refreshAuth] Keine Benutzerdaten gefunden");
           setUser(null);
@@ -440,18 +452,11 @@ export default function App() {
     };
   
     window.addEventListener('storage', handleStorageChange);
-    
-    // Zusätzlicher Event-Listener für manuell ausgelöste Events
-    const handleCustomStorageEvent = () => {
-      console.log("[App] Manuelles Storage-Event erkannt");
-      refreshAuth();
-    };
-    
-    window.addEventListener('storage', handleCustomStorageEvent);
+    window.addEventListener("auth-changed", handleStorageChange as EventListener); 
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('storage', handleCustomStorageEvent);
+      window.removeEventListener("auth-changed", handleStorageChange as EventListener);
     };
   }, [refreshAuth]);
 
@@ -464,8 +469,11 @@ export default function App() {
         <Links />
       </head>
       <body className="bg-gray-50 min-h-screen text-black">
-        <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
-        <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
+          <CartProvider>
+            <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
+            <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
+            <Footer /> {/* ✅ Footer hier einfügen */}
+          </CartProvider>
         <ScrollRestoration />
         <script
           dangerouslySetInnerHTML={{
@@ -473,7 +481,6 @@ export default function App() {
           }}
         />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );

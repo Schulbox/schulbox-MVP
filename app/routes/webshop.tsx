@@ -1,9 +1,8 @@
-// app/routes/webshop/index.tsx
-import { useLoaderData, Link } from "@remix-run/react";
+import { useLoaderData, Link, Outlet, useMatches } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import { useState } from "react";
+import { useCart } from "~/context/CartContext"; // <--- NEU
 
-// Loader für Produktliste
 export async function loader() {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
     method: "POST",
@@ -49,19 +48,36 @@ export async function loader() {
   return json(result.data.products.edges.map((edge: any) => edge.node));
 }
 
-
 export default function Webshop() {
   const products = useLoaderData<typeof loader>();
-
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("standard");
+  const { addToCart } = useCart(); // <--- NEU
+  const [clickedId, setClickedId] = useState<string | null>(null); // <--- NEU
+ 
+  const matches = useMatches();
+  const isDetailPage = matches.some((m) => m.id?.includes("webshop.$handle"));
+
+  if (isDetailPage) {
+    return (
+      <div className="max-w-7xl mx-auto p-4">
+        <Link
+          to="/webshop"
+          className="inline-block mb-6 text-blue-600 hover:text-blue-800 transition"
+        >
+          ← Zurück zum Shop
+        </Link>
+        <Outlet />
+      </div>
+    );
+  }
 
   const filteredProducts = products
     .filter((product: any) => {
       const query = searchQuery.toLowerCase();
       return (
         product.title.toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query)
+        (product.description || "").toLowerCase().includes(query)
       );
     })
     .sort((a: any, b: any) => {
@@ -76,6 +92,18 @@ export default function Webshop() {
       }
       return 0;
     });
+
+  const handleAddToCart = (product: any) => {
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: parseFloat(product.priceRange.minVariantPrice.amount),
+      image: product.images.edges[0]?.node.url || "",
+      quantity: 1,
+    });
+    setClickedId(product.id);
+    setTimeout(() => setClickedId(null), 300);
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-4">
@@ -128,9 +156,18 @@ export default function Webshop() {
             <div className="text-lg font-bold mb-1">
               {product.priceRange.minVariantPrice.amount} {product.priceRange.minVariantPrice.currencyCode}
             </div>
-            <button className="mt-auto bg-[#005eb8] text-white py-2 rounded-lg hover:bg-blue-700 transition">
-              In den Einkaufswagen
-            </button>
+
+              <button
+                onClick={() => handleAddToCart(product)}
+                className={`mt-auto bg-[#005eb8] text-white py-2 px-3 rounded-lg text-sm transition transform ${
+                  clickedId === product.id
+                    ? "scale-110 bg-blue-700"
+                    : "hover:scale-105 hover:bg-blue-700"
+                }`}
+              >
+                In den Einkaufswagen
+              </button>
+
           </div>
         ))}
       </div>

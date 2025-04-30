@@ -58,15 +58,6 @@ export default function Index() {
         </p>
       </section>
 
-      <footer className="border-t py-6 text-sm text-gray-500">
-        <p>© 2025 Schulbox &nbsp;&nbsp;|
-          <Link to="/impressum" className="hover:underline"> Impressum</Link> &nbsp;|
-          <Link to="/datenschutz" className="hover:underline"> Datenschutz</Link> &nbsp;|
-          <Link to="/agb" className="hover:underline"> AGB</Link> &nbsp;|
-          <Link to="/widerruf" className="hover:underline"> Widerruf</Link> &nbsp;|
-          <Link to="/kontakt" className="hover:underline"> Kontakt</Link>
-        </p>
-      </footer>
     </div>
   );
 }
