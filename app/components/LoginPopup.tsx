@@ -136,8 +136,9 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
               name="email"
               placeholder="Ihre E-Mail-Adresse"
               required
-              className="w-full border rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-black autofill:bg-white autofill:text-black"
             />
+
           </div>
           
           <div>
@@ -150,7 +151,7 @@ export default function LoginPopup({ onClose }: { onClose: () => void }) {
               name="password"
               placeholder="Ihr Passwort"
               required
-              className="w-full border rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-black autofill:bg-white autofill:text-black"
             />
           </div>
           

@@ -331,10 +331,12 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
 
 {/* Mobile Menü – ohne <Transition> */}
 <div
+  ref={mobileMenuRef}
   className={`fixed top-0 right-0 h-full z-[999] bg-gray-100 shadow-xl rounded-l-2xl transform transition-transform duration-300 ease-in-out ${
     mobileMenuOpen ? "translate-x-0" : "translate-x-full"
   } w-fit max-w-[300px]`}
 >
+
   {/* Blauer Kopfbereich */}
   <div className="bg-blue-100 px-6 py-6 rounded-t-2xl shadow-md relative">
     {user && (

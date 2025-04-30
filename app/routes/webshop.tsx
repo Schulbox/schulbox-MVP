@@ -109,32 +109,33 @@ export default function Webshop() {
     <div className="max-w-7xl mx-auto p-4">
       {/* Filter und Sortieren */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex flex-col">
-            <label className="font-bold text-sm mb-1">Sortieren nach:</label>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="border rounded px-3 py-2"
-            >
-              <option value="standard">Standard</option>
-              <option value="preis-auf">Preis aufsteigend</option>
-              <option value="preis-ab">Preis absteigend</option>
-              <option value="az">Alphabetisch (A-Z)</option>
-            </select>
-          </div>
-        </div>
+  <div className="flex flex-wrap gap-4 items-center">
+    <div className="flex flex-col">
+      <label className="font-bold text-sm mb-1">Sortieren nach:</label>
+      <select
+        value={sortOption}
+        onChange={(e) => setSortOption(e.target.value)}
+        className="bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+      >
+        <option value="standard">Standard</option>
+        <option value="preis-auf">Preis aufsteigend</option>
+        <option value="preis-ab">Preis absteigend</option>
+        <option value="az">Alphabetisch (A-Z)</option>
+      </select>
+    </div>
+  </div>
 
-        <div className="mt-4 md:mt-0">
-          <input
-            type="text"
-            placeholder="Suche..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="border rounded px-4 py-2 w-full md:w-64"
-          />
-        </div>
-      </div>
+  <div className="mt-4 md:mt-0">
+    <input
+      type="text"
+      placeholder="Suche..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-4 py-2 w-full md:w-64 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+    />
+  </div>
+</div>
+
 
       {/* Produktliste */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

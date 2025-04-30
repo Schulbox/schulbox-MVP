@@ -1,13 +1,8 @@
 {
-    "rewrites": [
-      {
-        "source": "/webshop/:slug*",
-        "destination": "/webshop/$slug"
-      },
-      {
-        "source": "/webshop/:slug*",
-        "destination": "/build/server/index.js"
-      }
-    ]
-  }
-  
+  "rewrites": [
+    {
+      "source": "/webshop/:slug*",
+      "destination": "/webshop/$slug"
+    }
+  ]
+}

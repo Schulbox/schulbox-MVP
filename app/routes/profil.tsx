@@ -20,8 +20,9 @@ type ProfileData = {
 
 type ActionResponse = {
   success?: boolean;
-  error?: string;
+  error?: string | null;
 };
+
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Hole Tokens aus Cookies
@@ -142,10 +143,13 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     // Setze die Session
-    await supabase.auth.setSession({
-      refresh_token,
-      access_token
-    });
+    if (refresh_token && access_token) {
+      await supabase.auth.setSession({
+        refresh_token,
+        access_token,
+      });
+    }
+    
 
     // Hole Benutzer-ID
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -212,7 +216,9 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 }
 
-export default function ProfilPage() {
+  export default function ProfilPage() {
+    const inputClasses =
+      "bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md px-3 py-2 w-full appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [&:-webkit-autofill]:bg-white [&:-webkit-autofill]:text-gray-900 [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_white]";  
   const { profile, error, needsClientAuth } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
@@ -325,7 +331,7 @@ export default function ProfilPage() {
                   type="text"
                   value={localProfile.vorname || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -339,7 +345,7 @@ export default function ProfilPage() {
                   type="text"
                   value={localProfile.nachname || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -353,7 +359,7 @@ export default function ProfilPage() {
                   type="text"
                   value={localProfile.adresse || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -367,7 +373,7 @@ export default function ProfilPage() {
                   type="text"
                   value={localProfile.plz || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -381,7 +387,7 @@ export default function ProfilPage() {
                   type="text"
                   value={localProfile.ort || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -395,7 +401,7 @@ export default function ProfilPage() {
                   type="tel"
                   value={localProfile.telefon || ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -408,7 +414,7 @@ export default function ProfilPage() {
                   name="role"
                   value={localProfile.role || "lehrkraft"}
                   onChange={handleInputChange}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 >
                   <option value="eltern">Eltern</option>
                   <option value="lehrkraft">Lehrkraft</option>
