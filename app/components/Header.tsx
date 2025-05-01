@@ -255,7 +255,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
                   </Link>
                   {isTeacher && (
                     <Link 
-                      to="/konfigurator" 
+                      to="/lehrkraft/konfigurator" 
                       onClick={() => setUserMenuOpen(false)} 
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
@@ -367,7 +367,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
       <NavItem icon={BoxIcon} label="Schulboxen" to="/schulboxen" onClick={() => setMobileMenuOpen(false)} />
       <NavItem icon={UserGroupIcon} label="Über uns" to="/ueber-uns" onClick={() => setMobileMenuOpen(false)} />
       {isTeacher && (
-        <NavItem icon={ToolboxIcon} label="Box Konfigurator" to="/konfigurator" onClick={() => setMobileMenuOpen(false)} />
+        <NavItem icon={ToolboxIcon} label="Box Konfigurator" to="/lehrkraft/konfigurator" onClick={() => setMobileMenuOpen(false)} />
       )}
       {isLoggedIn && (
         <>
