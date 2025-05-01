@@ -24,6 +24,7 @@ export type Product = {
   id: string;
   title: string;
   description: string;
+  preis: number;
   handle: string;
   images: {
     edges: {
@@ -40,3 +41,4 @@ export type Product = {
     };
   };
 };
+

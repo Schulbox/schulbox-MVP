@@ -2,63 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Deaktiviere Dark Mode global */
-html, body {
-  @apply bg-white;
+html,
+body {
+  @apply bg-white dark:bg-gray-950;
+
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
 }
 
-/* Einheitliche helle Eingabefelder */
-input,
-textarea,
-select {
-  @apply bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none;
-}
-
-/* Fokuszustand */
-input:focus,
-textarea:focus,
-select:focus {
-  @apply ring-2 ring-blue-500 border-blue-500;
-}
-
-/* Autofill-Fix für alle Browser */
+/* Fix autofill background and text color - Enhanced for Mobile */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
-textarea:-webkit-autofill,
-textarea:-webkit-autofill:hover,
-textarea:-webkit-autofill:focus,
-select:-webkit-autofill,
-select:-webkit-autofill:hover,
-select:-webkit-autofill:focus {
-  box-shadow: inset 0 0 0 1000px #ffffff !important;
-  -webkit-box-shadow: inset 0 0 0 1000px #ffffff !important;
-  -webkit-text-fill-color: #111111 !important;
-  color: #111111 !important;
-  caret-color: #111 !important;
-  font-family: inherit !important;
-  transition: background-color 0s, color 0s;
+input:-webkit-autofill:active {
+    /* Force white background */
+    -webkit-box-shadow: 0 0 0 1000px white inset !important; 
+    /* Force black text color */
+    -webkit-text-fill-color: black !important; 
+    /* Also try setting color directly */
+    color: black !important;
+    /* Prevent transition effects that might interfere */
+    transition: background-color 5000s ease-in-out 0s;
 }
 
-
-
-/* Extra-starker Autofill-Fix für mobile Geräte */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
-  box-shadow: 0 0 0px 1000px white inset !important;
-
-  -webkit-text-fill-color: #111 !important;
-  color: #111 !important;
-  caret-color: #111 !important;
-
-  font-family: inherit !important;
-  transition: background-color 0s, color 0s;
-}
-
-
-
-.input-style {
-  @apply bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none;
+/* Firefox - less control but try setting color */
+input:-moz-autofill,
+input:-moz-autofill:hover,
+input:-moz-autofill:focus,
+input:-moz-autofill:active {
+    box-shadow: 0 0 0 1000px white inset !important;
+    color: black !important; /* Main fallback for Firefox */
 }

@@ -21,6 +21,7 @@ import "~/styles/tailwind.css"; // oder dein korrekter Pfad
 import { useOutletContext } from "@remix-run/react";
 import { triggerCartSync } from "./context/CartContext";
 import Footer from "~/components/footer";
+import tailwindStyles from "~/styles/tailwind.css?url";
 
 
 // Typ für den Benutzer
@@ -89,7 +90,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   );
 }
 
-
+export function links() {
+  return [{ rel: "stylesheet", href: tailwindStyles }];
+}
 
 export default function App() {
   const { ENV, isLoggedIn: serverIsLoggedIn } = useLoaderData<typeof loader>();
