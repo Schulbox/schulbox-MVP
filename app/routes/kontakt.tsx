@@ -63,7 +63,7 @@ export default function Kontakt() {
             type="text"
             name="name"
             id="name"
-            className="w-full mt-1 border border-gray-300 rounded px-3 py-2"
+            className="" // Rely on base styles from tailwind.css
           />
         </div>
 
@@ -76,7 +76,7 @@ export default function Kontakt() {
             type="email"
             name="email"
             id="email"
-            className="w-full mt-1 border border-gray-300 rounded px-3 py-2"
+            className="" // Rely on base styles from tailwind.css
           />
         </div>
 
@@ -89,7 +89,7 @@ export default function Kontakt() {
             name="message"
             id="message"
             rows={6}
-            className="w-full mt-1 border border-gray-300 rounded px-3 py-2"
+            className="" // Rely on base styles from tailwind.css
           ></textarea>
         </div>
 
@@ -103,3 +103,4 @@ export default function Kontakt() {
     </div>
   );
 }
+

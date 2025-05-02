@@ -1,44 +1,39 @@
 // app/routes/profil.tsx
 import { useState, useEffect } from "react";
 import { Form, useActionData, useLoaderData, useNavigate } from "@remix-run/react";
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs, redirect } from "@remix-run/node";
 import { createServerClient } from "@supabase/auth-helpers-remix";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
-import { User } from "~/root";
 
+// --- Typdefinitionen ---
 type ProfileData = {
   user_id?: string;
   vorname?: string;
   nachname?: string;
-  adresse?: string;
-  plz?: string;
+  straße?: string;
+  hausnummer?: string;
+  türnummer?: string;
+  stiege?: string;
+  postleitzahl?: string;
   ort?: string;
-  telefon?: string;
-  role?: string;
+  telefonnummer?: string;
   email?: string;
 };
 
 type ActionResponse = {
   success?: boolean;
+  passwordChanged?: boolean;
   error?: string | null;
 };
 
-
+// --- Loader ---
+// --- Loader ---
 export async function loader({ request }: LoaderFunctionArgs) {
-  // Hole Tokens aus Cookies
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
-  
-  // Wenn keine Tokens vorhanden sind, leite zum Login weiter
-  if (!refresh_token && !access_token) {
-    // Prüfe, ob localStorage-Tokens vorhanden sind (Client-seitig)
-    return json({ 
-      profile: null,
-      error: null,
-      needsClientAuth: true
-    });
+  if (!refresh_token || !access_token) {
+    return json({ profile: null, error: null, needsClientAuth: true });
   }
 
-  // Erstelle Supabase-Client
   const response = new Response();
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
@@ -46,226 +41,145 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { request, response }
   );
 
-  try {
-    // Setze die Session, wenn Tokens vorhanden sind
-    if (refresh_token && access_token) {
-      await supabase.auth.setSession({
-        refresh_token,
-        access_token
-      });
-    }
+  await supabase.auth.setSession({ refresh_token, access_token });
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    // Hole Benutzer-ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("[profil.loader] Fehler beim Abrufen des Benutzers:", userError?.message);
-      return json({ 
-        profile: null,
-        error: "Benutzer konnte nicht authentifiziert werden.",
-        needsClientAuth: true
-      });
-    }
+  if (userError || !user) {
+    return json({
+      profile: null,
+      error: "Benutzer konnte nicht authentifiziert werden.",
+      needsClientAuth: true
+    });
+  }
 
-    // Hole Benutzerprofil
-    const { data: profile, error: profileError } = await supabase
-      .from("benutzer")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
+  const { data: rows, error: profileError } = await supabase
+    .rpc("get_benutzer_profil", { user_id_param: user.id });
 
-    if (profileError) {
-      console.error("[profil.loader] Fehler beim Laden des Profils:", profileError.message);
-      
-      // Wenn das Profil nicht existiert, erstelle ein leeres Profil
-      if (profileError.code === "PGRST116") {
-        return json({ 
-          profile: { 
-            user_id: user.id,
-            email: user.email,
-            role: "lehrkraft" 
-          },
-          error: null,
-          needsClientAuth: false
-        }, {
-          headers: response.headers
-        });
-      }
-      
-      return json({ 
-        profile: null,
-        error: "Profil konnte nicht geladen werden.",
-        needsClientAuth: false
-      }, {
-        headers: response.headers
-      });
-    }
+  console.log("[Loader] rows aus get_benutzer_profil:", rows);
+  console.log("[Loader] Fehler:", profileError);
 
-    return json({ 
-      profile: {
-        ...profile,
-        email: user.email
-      },
-      error: null,
+  const profile = rows && rows.length > 0 ? rows[0] : null;
+
+  if (!profile) {
+    return json({
+      profile: null,
+      error: "Kein Benutzerprofil gefunden.",
       needsClientAuth: false
-    }, {
-      headers: response.headers
-    });
-  } catch (error) {
-    console.error("[profil.loader] Unerwarteter Fehler:", error);
-    return json({ 
-      profile: null,
-      error: "Ein unerwarteter Fehler ist aufgetreten.",
-      needsClientAuth: true
-    });
+    }, { headers: response.headers });
   }
+
+  return json({
+    profile: { ...profile, email: user.email },
+    error: null,
+    needsClientAuth: false
+  }, { headers: response.headers });
 }
 
+
+// --- Action ---
 export async function action({ request }: ActionFunctionArgs) {
-  // Hole Tokens aus Cookies
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
-  
-  // Wenn keine Tokens vorhanden sind, gib Fehler zurück
-  if (!refresh_token && !access_token) {
-    return json<ActionResponse>({ 
-      success: false,
-      error: "Nicht authentifiziert. Bitte melden Sie sich an."
-    });
+  if (!refresh_token || !access_token) {
+    return json<ActionResponse>({ success: false, error: "Nicht authentifiziert. Bitte einloggen." });
   }
 
-  // Erstelle Supabase-Client
   const response = new Response();
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
     { request, response }
   );
+  await supabase.auth.setSession({ refresh_token, access_token });
 
-  try {
-    // Setze die Session
-    if (refresh_token && access_token) {
-      await supabase.auth.setSession({
-        refresh_token,
-        access_token,
-      });
-    }
-    
-
-    // Hole Benutzer-ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("[profil.action] Fehler beim Abrufen des Benutzers:", userError?.message);
-      return json<ActionResponse>({ 
-        success: false,
-        error: "Benutzer konnte nicht authentifiziert werden."
-      });
-    }
-
-    // Hole Formulardaten
-    const formData = await request.formData();
-    const profileData: ProfileData = {
-      user_id: user.id,
-      vorname: (formData.get("vorname") as string) || "",
-      nachname: (formData.get("nachname") as string) || "",
-      adresse: (formData.get("adresse") as string) || "",
-      plz: (formData.get("plz") as string) || "",
-      ort: (formData.get("ort") as string) || "",
-      telefon: (formData.get("telefon") as string) || "",
-      role: (formData.get("role") as string) || "lehrkraft",
-      email: user.email
-    };
-
-    // Aktualisiere oder erstelle Profil
-    const { error: upsertError } = await supabase
-      .from("benutzer")
-      .upsert({
-        user_id: user.id,
-        vorname: profileData.vorname,
-        nachname: profileData.nachname,
-        adresse: profileData.adresse,
-        plz: profileData.plz,
-        ort: profileData.ort,
-        telefon: profileData.telefon,
-        role: profileData.role
-      });
-
-    if (upsertError) {
-      console.error("[profil.action] Fehler beim Aktualisieren des Profils:", upsertError.message);
-      return json<ActionResponse>({ 
-        success: false,
-        error: "Profil konnte nicht aktualisiert werden."
-      }, {
-        headers: response.headers
-      });
-    }
-
-    // Aktualisiere den localStorage-Cache
-    return json<ActionResponse>({ 
-      success: true,
-      error: null
-    }, {
-      headers: response.headers
-    });
-  } catch (error) {
-    console.error("[profil.action] Unerwarteter Fehler:", error);
-    return json<ActionResponse>({ 
-      success: false,
-      error: "Ein unerwarteter Fehler ist aufgetreten."
-    });
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return json<ActionResponse>({ success: false, error: "Benutzer konnte nicht geladen werden." });
   }
+
+  const formData = await request.formData();
+  const actionType = formData.get("_action");
+
+  if (actionType === "delete") {
+    // Konto löschen
+    await supabase.from("benutzer").delete().eq("user_id", user.id);
+    await supabase.auth.admin.deleteUser(user.id); // Requires service role key if used on server
+    return redirect("/logout");
+  }
+
+  // Profil aktualisieren
+  const newPassword = formData.get("password") as string;
+
+  const profileData: ProfileData = {
+    user_id: user.id,
+    vorname: formData.get("vorname") as string,
+    nachname: formData.get("nachname") as string,
+    straße: formData.get("straße") as string,
+    hausnummer: formData.get("hausnummer") as string,
+    türnummer: formData.get("türnummer") as string,
+    stiege: formData.get("stiege") as string,
+    postleitzahl: formData.get("postleitzahl") as string,
+    ort: formData.get("ort") as string,
+    telefonnummer: formData.get("telefonnummer") as string,
+    email: user.email
+  };
+
+  let passwordChanged = false;
+  if (newPassword && newPassword.length >= 6) {
+    const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
+    if (passwordError) {
+      return json<ActionResponse>({ success: false, error: "Passwort konnte nicht geändert werden." });
+    }
+    passwordChanged = true;
+  }
+
+  const { error: upsertError } = await supabase.from("benutzer").upsert(profileData);
+  if (upsertError) {
+    return json<ActionResponse>({ success: false, error: "Profil konnte nicht aktualisiert werden." });
+  }
+
+  return json<ActionResponse>({ success: true, passwordChanged, error: null });
 }
 
-  export default function ProfilPage() {
-    const inputClasses =
-      "bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md px-3 py-2 w-full appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [&:-webkit-autofill]:bg-white [&:-webkit-autofill]:text-gray-900 [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_white]";  
+export default function ProfilPage() {
   const { profile, error, needsClientAuth } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Lade Profil aus localStorage, wenn Server-seitiges Profil nicht verfügbar ist
   useEffect(() => {
+    if (profile) {
+      console.log("Setting localProfile:", profile); // ✅ für Debugging
+      setLocalProfile(profile);
+      localStorage.removeItem("user-profile-cache");
+    }
+  
     if (needsClientAuth) {
-      // Prüfe, ob der Benutzer eingeloggt ist
       const isLoggedIn = localStorage.getItem("sb-is-logged-in") === "true";
-      
       if (!isLoggedIn) {
         navigate("/login");
-        return;
       }
-      
-      // Versuche, Profil aus Cache zu laden
-      const cachedProfile = localStorage.getItem("user-profile-cache");
-      if (cachedProfile) {
-        try {
-          const userData = JSON.parse(cachedProfile);
-          setLocalProfile(userData);
-        } catch (e) {
-          console.error("[ProfilPage] Fehler beim Parsen des Benutzer-Caches:", e);
-        }
-      }
-    } else if (profile) {
-      setLocalProfile(profile);
     }
-    
+  
     setIsLoading(false);
   }, [profile, needsClientAuth, navigate]);
+  
 
-  // Zeige Erfolgs- oder Fehlermeldung
   useEffect(() => {
     if (actionData?.success) {
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-      
-      // Aktualisiere den localStorage-Cache
+      setPasswordChanged(Boolean(actionData.passwordChanged));
+      setTimeout(() => {
+        setShowSuccess(false);
+        setPasswordChanged(false);
+      }, 3000);
+
       if (localProfile) {
         localStorage.setItem("user-profile-cache", JSON.stringify(localProfile));
-        localStorage.setItem("user-profile-cache-time", Date.now().toString());
       }
     } else if (actionData?.error) {
       setErrorMessage(actionData.error);
@@ -274,165 +188,124 @@ export async function action({ request }: ActionFunctionArgs) {
     }
   }, [actionData, localProfile]);
 
-  // Aktualisiere lokales Profil bei Formularänderungen
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setLocalProfile(prev => prev ? { ...prev, [name]: value } : null);
   };
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6 mt-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
+  /*Ab hier beginnt die Komponente */
   return (
-    <div className="max-w-4xl mx-auto p-6 mt-8">
-      <h1 className="text-2xl font-bold mb-6">Mein Profil</h1>
-      
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
-        </div>
-      )}
-      
-      {showSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Profil erfolgreich aktualisiert!
-        </div>
-      )}
-      
-      {showError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-          {errorMessage}
-        </div>
-      )}
+    <div className="flex justify-center items-start min-h-screen pt-20 px-4 bg-white text-gray-900">
+      <div className="w-full max-w-3xl bg-white/70 backdrop-blur-md shadow-xl rounded-xl p-10 space-y-6 border border-gray-200">
+        <h1 className="text-2xl font-semibold text-blue-600 mb-2">👤 Mein Profil</h1>
 
-      {localProfile && (
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="mb-6 pb-4 border-b">
-            <p className="text-sm text-gray-600">E-Mail-Adresse (nicht änderbar)</p>
-            <p className="font-medium">{localProfile.email}</p>
-          </div>
-          
-          <Form method="post" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="vorname" className="block text-sm font-medium text-gray-700 mb-1">
-                  Vorname
-                </label>
-                <input
-                  id="vorname"
-                  name="vorname"
-                  type="text"
-                  value={localProfile.vorname || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
+        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+        {showSuccess && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Profil erfolgreich aktualisiert!</div>}
+        {passwordChanged && <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded">Passwort erfolgreich geändert!</div>}
+        {showError && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{errorMessage}</div>}
+
+        {localProfile && (
+          <Form method="post" className="space-y-5">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">E-Mail (nicht änderbar)</label>
+              <div className="px-4 py-2 border border-gray-300 rounded bg-gray-100 text-black text-sm">{localProfile.email}</div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label htmlFor="vorname" className="text-sm font-medium mb-1">Vorname</label>
+                <input id="vorname" name="vorname" value={localProfile.vorname || ""} onChange={handleInputChange}
+                  className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              
-              <div>
-                <label htmlFor="nachname" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nachname
-                </label>
-                <input
-                  id="nachname"
-                  name="nachname"
-                  type="text"
-                  value={localProfile.nachname || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label htmlFor="adresse" className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <input
-                  id="adresse"
-                  name="adresse"
-                  type="text"
-                  value={localProfile.adresse || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="plz" className="block text-sm font-medium text-gray-700 mb-1">
-                  PLZ
-                </label>
-                <input
-                  id="plz"
-                  name="plz"
-                  type="text"
-                  value={localProfile.plz || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="ort" className="block text-sm font-medium text-gray-700 mb-1">
-                  Ort
-                </label>
-                <input
-                  id="ort"
-                  name="ort"
-                  type="text"
-                  value={localProfile.ort || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="telefon" className="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer
-                </label>
-                <input
-                  id="telefon"
-                  name="telefon"
-                  type="tel"
-                  value={localProfile.telefon || ""}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                  Rolle
-                </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={localProfile.role || "lehrkraft"}
-                  onChange={handleInputChange}
-                  className={inputClasses}
-                >
-                  <option value="eltern">Eltern</option>
-                  <option value="lehrkraft">Lehrkraft</option>
-                </select>
+              <div className="flex flex-col">
+                <label htmlFor="nachname" className="text-sm font-medium mb-1">Nachname</label>
+                <input id="nachname" name="nachname" value={localProfile.nachname || ""} onChange={handleInputChange}
+                  className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md px-4 py-2 disabled:opacity-50"
-              >
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-2 flex flex-col">
+                <label htmlFor="straße" className="text-sm font-medium mb-1">Straße</label>
+                <input id="straße" name="straße" value={localProfile.straße || ""} onChange={handleInputChange}
+                  className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="hausnummer" className="text-sm font-medium mb-1">Nr.</label>
+                <input id="hausnummer" name="hausnummer" value={localProfile.hausnummer || ""} onChange={handleInputChange}
+                  className="px-3 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="türnummer" className="text-sm font-medium mb-1">Tür</label>
+                <input id="türnummer" name="türnummer" value={localProfile.türnummer || ""} onChange={handleInputChange}
+                  className="px-3 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="stiege" className="text-sm font-medium mb-1">Stiege</label>
+                <input id="stiege" name="stiege" value={localProfile.stiege || ""} onChange={handleInputChange}
+                  className="px-3 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label htmlFor="postleitzahl" className="text-sm font-medium mb-1">Postleitzahl</label>
+                <input id="postleitzahl" name="postleitzahl" value={localProfile.postleitzahl || ""} onChange={handleInputChange}
+                  className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="ort" className="text-sm font-medium mb-1">Ort</label>
+                <input id="ort" name="ort" value={localProfile.ort || ""} onChange={handleInputChange}
+                  className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="telefonnummer" className="text-sm font-medium mb-1">Telefonnummer</label>
+              <input id="telefonnummer" name="telefonnummer" value={localProfile.telefonnummer || ""} onChange={handleInputChange}
+                className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="password" className="text-sm font-medium mb-1">Neues Passwort</label>
+              <input id="password" name="password" type="password" minLength={6}
+                placeholder="Mindestens 6 Zeichen"
+                className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <span className="text-gray-400 text-xs mt-1">Nur ausfüllen, wenn du dein Passwort ändern möchtest</span>
+            </div>
+
+            <div>
+              <button type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md px-4 py-2.5 transition text-sm">
                 Änderungen speichern
               </button>
+              <Form method="post">
+  <input type="hidden" name="_action" value="delete" />
+  <button
+    type="submit"
+    className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-medium rounded-md px-4 py-2.5 transition text-sm"
+    onClick={(e) => {
+      if (!confirm("Bist du sicher, dass du dein Konto löschen möchtest? Dies kann nicht rückgängig gemacht werden!")) {
+        e.preventDefault();
+      }
+    }}
+  >
+    Konto löschen
+  </button>
+</Form>
+
             </div>
           </Form>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { useOutletContext } from "@remix-run/react";
 import { triggerCartSync } from "./context/CartContext";
 import Footer from "~/components/footer";
 import tailwindStyles from "~/styles/tailwind.css?url";
+import { SearchProvider } from "~/context/SearchContext";
 
 
 // Typ für den Benutzer
@@ -473,9 +474,11 @@ export default function App() {
       </head>
       <body className="bg-gray-50 min-h-screen text-black">
           <CartProvider>
+          <SearchProvider>
             <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
             <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
             <Footer /> {/* ✅ Footer hier einfügen */}
+            </SearchProvider>
           </CartProvider>
         <ScrollRestoration />
         <script

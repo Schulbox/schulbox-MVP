@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import { Transition } from "@headlessui/react";
 import { motion } from "framer-motion";
-import { User, ShoppingCart, Menu, X, ChevronDown } from "lucide-react";
+import { User, ShoppingCart, Menu, X, ChevronDown, StoreIcon } from "lucide-react";
 import LoginPopup from "./LoginPopup";
 import { useRevalidator, useFetcher } from "@remix-run/react";
 import { useOutletContext } from "@remix-run/react";
@@ -20,7 +20,10 @@ import {
   RegisterIcon,
   UserGroupIcon,
   ToolboxIcon,
+  Schulbox,
+  HouseIcon,
 } from "~/components/icons";
+import { useSearch } from "~/context/SearchContext";
 
 
 const NavItem = ({
@@ -86,6 +89,9 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
   const revalidator = useRevalidator();
   const logoutFetcher = useFetcher(); // Fetcher für Logout
   const { totalItems, justAdded, setItems, clearCart } = useCart();
+  const { triggerSearch } = useSearch();
+  const [inputValue, setInputValue] = useState("");
+
 
 
   // Sicheres Abrufen des Outlet-Kontexts mit Fallback
@@ -104,6 +110,13 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      triggerSearch(inputValue);
+    }
+  };
+  
 
   const handleLogout = async () => {
     setUserMenuOpen(false); // Dropdown schließen
@@ -179,6 +192,9 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
               type="text"
               placeholder="Produkt suche Artikelbezeichnung, Artikelnummer"
               className="w-full bg-gray-100 border border-gray-300 rounded-full pl-10 pr-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
@@ -200,6 +216,9 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
               type="text"
               placeholder="Produkt suche Artikelbezeichnung, Artikelnummer"
               className="w-full border rounded-full pl-10 pr-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
@@ -255,7 +274,7 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
                   </Link>
                   {isTeacher && (
                     <Link 
-                      to="/lehrkraft/konfigurator" 
+                      to="/konfigurator" 
                       onClick={() => setUserMenuOpen(false)} 
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
@@ -290,27 +309,27 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
           )}
 
           {/* Warenkorb Icon */}
-          <motion.div
-  whileHover={{ scale: 1.1 }}
-  whileTap={{ scale: 0.95 }}
-  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-  className="cursor-pointer ml-2 relative"
->
-  <Link to="/warenkorb">
-    <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-blue-600" />
-    {totalItems > 0 && (
-      <motion.div
-        key={totalItems} 
-        initial={{ scale: 1 }}
-        animate={{ scale: justAdded ? [1.3, 1.1, 1] : 1 }}
-        transition={{ duration: 0.3 }}
-        className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow"
-      >
-        {totalItems}
-      </motion.div>
-    )}
-  </Link>
-</motion.div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              className="cursor-pointer ml-2 relative"
+            >
+              <Link to="/warenkorb">
+                <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-blue-600" />
+                {totalItems > 0 && (
+                  <motion.div
+                    key={totalItems} 
+                    initial={{ scale: 1 }}
+                    animate={{ scale: justAdded ? [1.3, 1.1, 1] : 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow"
+                  >
+                    {totalItems}
+                  </motion.div>
+                )}
+              </Link>
+            </motion.div>
 
               {/* Mobile Menü Button */}
 {/* Hamburger-Button */}
@@ -363,11 +382,12 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
   {/* Navigation */}
   <div className="h-full px-6 py-6 flex flex-col justify-between text-base text-gray-800">
     <nav className="space-y-2 font-medium">
-      <NavItem icon={HomeIcon} label="Webshop" to="/webshop" onClick={() => setMobileMenuOpen(false)} />
-      <NavItem icon={BoxIcon} label="Schulboxen" to="/schulboxen" onClick={() => setMobileMenuOpen(false)} />
+      <NavItem icon={HouseIcon} label="Home" to="/" onClick={() => setMobileMenuOpen(false)} />
+      <NavItem icon={StoreIcon} label="Webshop" to="/webshop" onClick={() => setMobileMenuOpen(false)} />
+      <NavItem icon={Schulbox} label="Schulboxen" to="/schulboxen" onClick={() => setMobileMenuOpen(false)} />
       <NavItem icon={UserGroupIcon} label="Über uns" to="/ueber-uns" onClick={() => setMobileMenuOpen(false)} />
       {isTeacher && (
-        <NavItem icon={ToolboxIcon} label="Box Konfigurator" to="/lehrkraft/konfigurator" onClick={() => setMobileMenuOpen(false)} />
+        <NavItem icon={BoxIcon} label="Box Konfigurator" to="/konfigurator" onClick={() => setMobileMenuOpen(false)} />
       )}
       {isLoggedIn && (
         <>

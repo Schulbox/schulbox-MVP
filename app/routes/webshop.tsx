@@ -2,6 +2,7 @@ import { useLoaderData, Link, Outlet, useMatches } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import { useState } from "react";
 import { useCart } from "~/context/CartContext"; // <--- NEU
+import { useSearch } from "~/context/SearchContext";
 
 export async function loader() {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
@@ -50,7 +51,7 @@ export async function loader() {
 
 export default function Webshop() {
   const products = useLoaderData<typeof loader>();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { searchQuery, setSearchQuery } = useSearch();
   const [sortOption, setSortOption] = useState("standard");
   const { addToCart } = useCart(); // <--- NEU
   const [clickedId, setClickedId] = useState<string | null>(null); // <--- NEU

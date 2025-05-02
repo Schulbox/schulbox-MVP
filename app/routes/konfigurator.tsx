@@ -1,7 +1,9 @@
 import { useLoaderData, Link, Outlet, useMatches } from "@remix-run/react";
 import { json, type LoaderFunction } from "@remix-run/node";
-import { useState } from "react";
-import { useCart } from "~/context/CartContext";
+import { useState, useEffect } from "react";
+import { useSearch } from "~/context/SearchContext";
+import { motion } from "framer-motion";
+import { BoxIcon } from "~/components/icons";
 
 export const loader: LoaderFunction = async () => {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
@@ -50,10 +52,24 @@ export const loader: LoaderFunction = async () => {
 
 export default function KonfiguratorSeite() {
   const { produkte } = useLoaderData<typeof loader>();
-  const [suchbegriff, setSuchbegriff] = useState("");
+  const { searchQuery, setSearchQuery } = useSearch();
   const [sortOption, setSortOption] = useState("standard");
   const [schulbox, setSchulbox] = useState<Record<string, number>>({});
   const [clickedId, setClickedId] = useState<string | null>(null);
+
+  const [totalBoxItems, setTotalBoxItems] = useState(0);
+  const [justAddedToBox, setJustAddedToBox] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedBox = JSON.parse(localStorage.getItem("schulbox") || "{}");
+      setTotalBoxItems(Object.keys(storedBox).length);
+  
+      const justAdded = sessionStorage.getItem("just-added-to-box") === "true";
+      setJustAddedToBox(justAdded);
+    }
+  }, []);
+  
 
   const matches = useMatches();
   const isDetailPage = matches.some((m) => m.id?.includes("konfigurator.$handle"));
@@ -62,7 +78,7 @@ export default function KonfiguratorSeite() {
     return (
       <div className="max-w-7xl mx-auto p-4">
         <Link
-          to="/lehrkraft/konfigurator"
+          to="/konfigurator"
           className="inline-block mb-6 text-blue-600 hover:text-blue-800 transition"
         >
           ← Zurück zur Übersicht
@@ -74,10 +90,8 @@ export default function KonfiguratorSeite() {
 
   const gefilterteProdukte = produkte
     .filter((product: any) => {
-      const query = suchbegriff.toLowerCase();
-      return (
-        product.title.toLowerCase().includes(query)
-      );
+      const query = searchQuery.toLowerCase();
+      return product.title.toLowerCase().includes(query);
     })
     .sort((a: any, b: any) => {
       if (sortOption === "preis-auf") {
@@ -103,40 +117,61 @@ export default function KonfiguratorSeite() {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex flex-col">
-            <label className="font-bold text-sm mb-1">Sortieren nach:</label>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-            >
-              <option value="standard">Standard</option>
-              <option value="preis-auf">Preis aufsteigend</option>
-              <option value="preis-ab">Preis absteigend</option>
-              <option value="az">Alphabetisch (A-Z)</option>
-            </select>
-          </div>
+      {/* Filter, Suche und Box */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-lg shadow mb-6">
+        <div className="flex flex-col gap-2 mb-4 md:mb-0">
+          <label className="font-bold text-sm">Sortieren nach:</label>
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+          >
+            <option value="standard">Standard</option>
+            <option value="preis-auf">Preis aufsteigend</option>
+            <option value="preis-ab">Preis absteigend</option>
+            <option value="az">Alphabetisch (A-Z)</option>
+          </select>
         </div>
-        <div className="mt-4 md:mt-0">
-          <input
-            type="text"
-            placeholder="Artikel für die Schulbox suchen"
-            value={suchbegriff}
-            onChange={(e) => setSuchbegriff(e.target.value)}
-            className="bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-4 py-2 w-full md:w-64 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-          />
+
+        <div className="flex items-center gap-4">
+
+
+          
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="cursor-pointer ml-2 relative"
+                >
+                  <Link to="/konfigurator">
+                    <BoxIcon className="h-6 w-6 text-gray-700 hover:text-blue-600" />
+                    {totalBoxItems > 0 && (
+                      <motion.div
+                        key={totalBoxItems}
+                        initial={{ scale: 1 }}
+                        animate={{ scale: justAddedToBox ? [1.3, 1.1, 1] : 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow"
+                      >
+                        {totalBoxItems}
+                      </motion.div>
+                    )}
+                  </Link>
+                </motion.div>
+
+          
+          
         </div>
       </div>
 
+      {/* Produktliste */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {gefilterteProdukte.map((product: any) => (
           <div
             key={product.id}
             className="border rounded-lg p-3 shadow hover:shadow-md transition flex flex-col"
           >
-            <Link to={`/lehrkraft/konfigurator/${product.handle}`}>
+            <Link to={`/konfigurator/${product.handle}`}>
               {product.images.edges[0]?.node.url && (
                 <img
                   src={product.images.edges[0].node.url}
@@ -161,18 +196,6 @@ export default function KonfiguratorSeite() {
             </button>
           </div>
         ))}
-      </div>
-
-      {/* Box oben rechts */}
-      <div className="fixed top-6 right-6 z-50">
-        <div className="relative">
-          <span className="text-4xl">📦</span>
-          {Object.keys(schulbox).length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full px-2">
-              {Object.values(schulbox).reduce((a, b) => a + b, 0)}
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );

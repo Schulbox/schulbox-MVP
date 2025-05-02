@@ -1,3 +1,4 @@
+
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { useEffect, useState } from "react";
@@ -85,106 +86,97 @@ export default function Register() {
     }
   }, [showSuccess]);
 
-  const inputClasses =
-  "bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded px-3 py-2 w-full appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" +
-  " [&:-webkit-autofill]:!bg-white [&:-webkit-autofill]:!text-gray-900 [&:-webkit-autofill]:!shadow-[inset_0_0_0px_1000px_white] [&:-webkit-autofill]:!caret-black";
-
-
-
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen px-4 pt-12 text-sm max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-8 w-full">📝 Registrieren</h1>
+    <div className="flex justify-center items-start min-h-screen pt-20 px-4 bg-white text-gray-900">
+      <div className="w-full max-w-3xl bg-white/70 backdrop-blur-md shadow-xl rounded-xl p-10 space-y-6 border border-gray-200">
+        <h1 className="text-2xl font-semibold text-blue-600 mb-2">📝 Registrieren</h1>
 
-      {showSuccess && actionData?.email && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 w-full">
-          Die Registrierung bei Schulbox war erfolgreich. Es wurde ein Bestätigungslink an{" "}
-          <span className="text-green-700 font-medium">{actionData.email}</span> geschickt.
-          <p className="mt-2 text-sm">
-            Weiterleitung zur Startseite in {countdown} Sekunden <br />
-            <a href="/" className="text-blue-600 underline">oder hier direkt zur Startseite</a>
-          </p>
-        </div>
-      )}
-
-      {!showSuccess && (
-        <Form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          <div className="flex flex-col">
-            <label htmlFor="vorname">Vorname *</label>
-            <input id="vorname" name="vorname" required className={inputClasses} />
+        {showSuccess && actionData?.email && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+            Die Registrierung war erfolgreich. Eine Bestätigung wurde an{" "}
+            <span className="font-semibold">{actionData.email}</span> gesendet.
+            <p className="mt-2 text-sm">
+              Weiterleitung zur Startseite in {countdown} Sekunden<br />
+              <a href="/" className="text-blue-600 underline">oder hier direkt zur Startseite</a>
+            </p>
           </div>
-          <div className="flex flex-col">
-            <label htmlFor="nachname">Nachname *</label>
-            <input id="nachname" name="nachname" required className={inputClasses} />
-          </div>
+        )}
 
-          <div className="flex flex-col md:col-span-2">
-            <label htmlFor="straße">Straße *</label>
-            <input id="straße" name="straße" required className={inputClasses} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 md:col-span-2">
-            <div className="flex flex-col">
-              <label htmlFor="hausnummer">Nr. *</label>
-              <input id="hausnummer" name="hausnummer" required className={inputClasses} />
+        {!showSuccess && (
+          <Form method="post" className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label htmlFor="vorname" className="text-sm font-medium mb-1">Vorname *</label>
+                <input id="vorname" name="vorname" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="nachname" className="text-sm font-medium mb-1">Nachname *</label>
+                <input id="nachname" name="nachname" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="türnummer">TürNr.</label>
-              <input id="türnummer" name="türnummer" className={inputClasses} />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="stiege">Stiege</label>
-              <input id="stiege" name="stiege" className={inputClasses} />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2 md:col-span-2">
-            <div className="flex flex-col">
-              <label htmlFor="postleitzahl">Postleitzahl *</label>
-              <input id="postleitzahl" name="postleitzahl" required className={inputClasses} />
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-2 flex flex-col">
+                <label htmlFor="straße" className="text-sm font-medium mb-1">Straße *</label>
+                <input id="straße" name="straße" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="hausnummer" className="text-sm font-medium mb-1">Nr. *</label>
+                <input id="hausnummer" name="hausnummer" required className="px-3 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="türnummer" className="text-sm font-medium mb-1">Tür</label>
+                <input id="türnummer" name="türnummer" className="px-3 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="stiege" className="text-sm font-medium mb-1">Stiege</label>
+                <input id="stiege" name="stiege" className="px-3 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="ort">Ort *</label>
-              <input id="ort" name="ort" required className={inputClasses} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label htmlFor="postleitzahl" className="text-sm font-medium mb-1">Postleitzahl *</label>
+                <input id="postleitzahl" name="postleitzahl" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="ort" className="text-sm font-medium mb-1">Ort *</label>
+                <input id="ort" name="ort" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="telefonnummer">Telefonnummer</label>
-              <input id="telefonnummer" name="telefonnummer" className={inputClasses} />
+
+            <div className="flex flex-col md:col-span-1">
+              <label htmlFor="telefonnummer" className="text-sm font-medium mb-1">Telefonnummer</label>
+              <input id="telefonnummer" name="telefonnummer" className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-          </div>
 
-          <div className="flex flex-col md:col-span-2">
-            <label htmlFor="email">E-Mail *</label>
-            <input id="email" name="email" type="email" required className={inputClasses} />
-          </div>
+            <div className="md:col-span-1 flex flex-col">
+              <label htmlFor="email" className="text-sm font-medium mb-1">E-Mail *</label>
+              <input id="email" name="email" type="email" required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
 
-          <div className="flex flex-col md:col-span-2">
-            <label htmlFor="password">Passwort *</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              className={inputClasses}
-            />
-            <span className="text-gray-500 text-xs mt-1">Mindestens 6 Zeichen oder Zahlen erforderlich</span>
-          </div>
+            <div className="md:col-span-1 flex flex-col">
+              <label htmlFor="password" className="text-sm font-medium mb-1">Passwort *</label>
+              <input id="password" name="password" type="password" minLength={6} required className="px-4 py-2 border border-gray-300 rounded w-full bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <span className="text-gray-400 text-xs mt-1">Mindestens 6 Zeichen erforderlich</span>
+            </div>
 
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={navigation.state === "submitting"}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-            >
-              {navigation.state === "submitting" ? "Wird gesendet..." : "Registrieren"}
-            </button>
-          </div>
+            <div>
+              <button
+                type="submit"
+                disabled={navigation.state === "submitting"}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md px-4 py-2.5 transition text-sm"
+              >
+                {navigation.state === "submitting" ? "Wird gesendet..." : "Registrieren"}
+              </button>
+            </div>
 
-          {"error" in (actionData ?? {}) && (
-            <p className="col-span-2 mt-2 text-red-600 text-sm">{actionData?.error}</p>
-          )}
-        </Form>
-      )}
+            {"error" in (actionData ?? {}) && (
+              <p className="mt-2 text-red-600 text-sm">{actionData?.error}</p>
+            )}
+          </Form>
+        )}
+      </div>
     </div>
   );
 }
