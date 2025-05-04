@@ -20,11 +20,12 @@ export default function SchulboxLoading({ targetUrl }: { targetUrl: string }) {
         loop: true,
         autoplay: true,
         path: "/images/schulbox_loading_animation/loading_animation.json",
+        assetsPath: "/images/schulbox_loading_animation/images/", // 🔥 DAS ist entscheidend!
       });
   
       const timeout = setTimeout(() => {
         navigate(targetUrl);
-      }, 2000);
+      }, 6000);
   
       return () => {
         anim.destroy();

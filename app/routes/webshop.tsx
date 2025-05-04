@@ -32,11 +32,19 @@ export async function loader() {
                   currencyCode
                 }
               }
+              variants(first: 1) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
             }
           }
         }
       }`
     }),
+    
   });
 
   const result = await response.json();
@@ -94,17 +102,26 @@ export default function Webshop() {
       return 0;
     });
 
-  const handleAddToCart = (product: any) => {
-    addToCart({
-      id: product.id,
-      title: product.title,
-      price: parseFloat(product.priceRange.minVariantPrice.amount),
-      image: product.images.edges[0]?.node.url || "",
-      quantity: 1,
-    });
-    setClickedId(product.id);
-    setTimeout(() => setClickedId(null), 300);
-  };
+    const handleAddToCart = (product: any) => {
+      const variantId = product.variants?.edges?.[0]?.node?.id;
+      if (!variantId) {
+        console.error("❌ Keine VariantID gefunden für Produkt", product.id);
+        return;
+      }
+    
+      addToCart({
+        id: product.id,
+        variantId,
+        title: product.title,
+        price: parseFloat(product.priceRange.minVariantPrice.amount),
+        image: product.images.edges[0]?.node.url || "",
+        quantity: 1,
+      });
+    
+      setClickedId(product.id);
+      setTimeout(() => setClickedId(null), 300);
+    };
+    
 
   return (
     <div className="max-w-7xl mx-auto p-4">

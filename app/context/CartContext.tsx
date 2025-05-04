@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export type CartItem = {
   id: string;
+  variantId: string; 
   title: string;
   quantity: number;
   price: number;

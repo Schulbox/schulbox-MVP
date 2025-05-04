@@ -83,9 +83,11 @@ export default function SchulboxCart() {
   };
   
 
-if (isCreating && redirectHandle) {
-  return <SchulboxLoading targetUrl={`/products/${redirectHandle}`} />;
-}
+  if (isCreating) {
+    return <SchulboxLoading targetUrl={`/webshop`} />;
+
+  }
+  
 
 
   return (

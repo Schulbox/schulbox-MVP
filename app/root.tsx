@@ -500,11 +500,7 @@ export default function App() {
             </SchulboxProvider>
           </CartProvider>
         <ScrollRestoration />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.ENV = ${JSON.stringify(ENV)}`,
-          }}
-        />
+
         <Scripts />
       </body>
     </html>

@@ -3,6 +3,8 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { supabase } from "~/lib/supabaseClient";
+import { createShopifyCustomer } from "~/utils/shopify/createShopifyCustomer.server";
+
 
 type ActionResponse = {
   success?: boolean;
@@ -11,18 +13,22 @@ type ActionResponse = {
 };
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log("🧪 action() gestartet"); // 👈 HIER EINFÜGEN
   const formData = await request.formData();
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const vorname = formData.get("vorname") as string;
+  const nachname = formData.get("nachname") as string;
 
   try {
+    console.log("🚀 Supabase-User wurde erstellt, versuche Shopify-Kunde anzulegen...");
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          vorname: formData.get("vorname"),
-          nachname: formData.get("nachname"),
+          vorname,
+          nachname,
           straße: formData.get("straße"),
           hausnummer: formData.get("hausnummer"),
           türnummer: formData.get("türnummer"),
@@ -34,6 +40,8 @@ export async function action({ request }: ActionFunctionArgs) {
         },
       },
     });
+    console.log("📥 Supabase signup response:", { data, signUpError });
+    console.log("✅ Shopify-Kunde erfolgreich angelegt");
 
     if (signUpError || !data.user) {
       return json<ActionResponse>({
@@ -41,13 +49,22 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
 
+    // ✅ Shopify-Kunde anlegen + Einladung senden
+    await createShopifyCustomer({
+      email,
+      firstName: vorname,
+      lastName: nachname,
+    });
+
     return json<ActionResponse>({ success: true, email });
-  } catch {
+  } catch (err) {
+    console.error("❌ Fehler beim Registrieren:", err);
     return json<ActionResponse>({
       error: "Ein unerwarteter Fehler ist aufgetreten.",
     });
   }
 }
+
 
 function translateError(error: string): string {
   if (error.includes("email")) {

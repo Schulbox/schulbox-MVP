@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import { vitePlugin as remix } from "@remix-run/dev";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { vercelPreset } from "@vercel/remix/vite";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
   plugins: [
@@ -20,5 +23,7 @@ export default defineConfig({
   define: {
     "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL),
     "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY),
+    "process.env.SHOP_DOMAIN": JSON.stringify(process.env.SHOP_DOMAIN),
+    "process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN": JSON.stringify(process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
   },
 });

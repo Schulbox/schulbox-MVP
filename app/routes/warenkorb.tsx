@@ -24,17 +24,27 @@ export default function Warenkorb() {
   const [showLogin, setShowLogin] = useState(false);
 
   const handleCheckout = async () => {
+    console.log("🚀 Checkout gestartet");
+
     if (!outletContext?.isLoggedIn) {
+      console.log("🛑 Nicht eingeloggt – LoginPopup anzeigen");
       setShowLogin(true);
       return;
     }
 
     const lineItems = items.map((item) => ({
-      variantId: item.id, // ACHTUNG: `item.id` muss eine Shopify-Variant-ID sein!
+      merchandiseId: item.variantId,
       quantity: item.quantity,
     }));
-
+    
     const checkoutUrl = await createShopifyCheckout(lineItems);
+    
+    
+    
+    console.log("🧾 LineItems:", lineItems);
+
+
+    console.log("🔗 Checkout URL:", checkoutUrl);
 
     if (checkoutUrl) {
       window.location.href = checkoutUrl;
@@ -108,9 +118,7 @@ export default function Warenkorb() {
         </div>
       )}
 
-      {showLogin && (
-        <LoginPopup onClose={() => setShowLogin(false)} />
-      )}
+      {showLogin && <LoginPopup onClose={() => setShowLogin(false)} />}
     </div>
   );
 }
