@@ -3,14 +3,14 @@ import { redirect, type ActionFunctionArgs } from "@remix-run/node";
 import { clearSupabaseSession } from "~/lib/session.server";
 
 export async function action({ request }: ActionFunctionArgs) {
-  // Lösche Server-seitige Session (Cookies)
+  // Serverseitige Session löschen (Cookie zurücksetzen)
   const cookie = await clearSupabaseSession(request);
-  
-  // Leite zur Startseite weiter
+
+  // Redirect zur Startseite mit Set-Cookie Header
   return redirect("/", {
     headers: {
-      "Set-Cookie": cookie
-    }
+      "Set-Cookie": cookie,
+    },
   });
 }
 

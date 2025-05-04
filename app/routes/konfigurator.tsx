@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearch } from "~/context/SearchContext";
 import { motion } from "framer-motion";
 import { BoxIcon } from "~/components/icons";
+import { useSchulbox } from "~/context/SchulboxContext";
 
 export const loader: LoaderFunction = async () => {
   const response = await fetch("https://nqwde0-ua.myshopify.com/api/2023-04/graphql.json", {
@@ -54,22 +55,8 @@ export default function KonfiguratorSeite() {
   const { produkte } = useLoaderData<typeof loader>();
   const { searchQuery, setSearchQuery } = useSearch();
   const [sortOption, setSortOption] = useState("standard");
-  const [schulbox, setSchulbox] = useState<Record<string, number>>({});
+  const { addToBox, totalItems, justAdded } = useSchulbox();
   const [clickedId, setClickedId] = useState<string | null>(null);
-
-  const [totalBoxItems, setTotalBoxItems] = useState(0);
-  const [justAddedToBox, setJustAddedToBox] = useState(false);
-  
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedBox = JSON.parse(localStorage.getItem("schulbox") || "{}");
-      setTotalBoxItems(Object.keys(storedBox).length);
-  
-      const justAdded = sessionStorage.getItem("just-added-to-box") === "true";
-      setJustAddedToBox(justAdded);
-    }
-  }, []);
-  
 
   const matches = useMatches();
   const isDetailPage = matches.some((m) => m.id?.includes("konfigurator.$handle"));
@@ -106,19 +93,20 @@ export default function KonfiguratorSeite() {
       return 0;
     });
 
-  const artikelZurBoxHinzufuegen = (product: any) => {
-    setSchulbox((prev) => ({
-      ...prev,
-      [product.id]: (prev[product.id] || 0) + 1,
-    }));
-    setClickedId(product.id);
-    setTimeout(() => setClickedId(null), 300);
-  };
+    const artikelZurBoxHinzufuegen = (product: any) => {
+      addToBox({
+        id: product.id,
+        title: product.title,
+        quantity: 1,
+        price: parseFloat(product.priceRange.minVariantPrice.amount),
+        image: product.images.edges[0]?.node.url || "",
+      });
+    };
 
   return (
     <div className="max-w-7xl mx-auto p-4">
       {/* Filter, Suche und Box */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-lg shadow mb-6">
+      <div className="sticky top-16 z-10 bg-white p-6 rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-2 mb-4 md:mb-0">
           <label className="font-bold text-sm">Sortieren nach:</label>
           <select
@@ -143,17 +131,17 @@ export default function KonfiguratorSeite() {
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="cursor-pointer ml-2 relative"
                 >
-                  <Link to="/konfigurator">
+                  <Link to="/schulboxcart" title="Schulbox erstellen">
                     <BoxIcon className="h-6 w-6 text-gray-700 hover:text-blue-600" />
-                    {totalBoxItems > 0 && (
+                    {totalItems > 0 && (
                       <motion.div
-                        key={totalBoxItems}
+                        key={totalItems}
                         initial={{ scale: 1 }}
-                        animate={{ scale: justAddedToBox ? [1.3, 1.1, 1] : 1 }}
+                        animate={{ scale: justAdded ? [1.3, 1.1, 1] : 1 }}
                         transition={{ duration: 0.3 }}
                         className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow"
                       >
-                        {totalBoxItems}
+                        {totalItems}
                       </motion.div>
                     )}
                   </Link>

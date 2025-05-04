@@ -161,6 +161,8 @@ export default function Header({ user, isLoggedIn, isLoading }: { user: UserType
     // Manuell ein Storage-Event auslösen, um andere Komponenten zu benachrichtigen
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new Event("auth-changed"));
+    navigate("/");
+
   };
 
   // Benutzeranzeigename bestimmen

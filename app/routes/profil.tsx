@@ -1,18 +1,17 @@
 // app/routes/profil.tsx
 import { useState, useEffect } from "react";
 import { Form, useActionData, useLoaderData, useNavigate } from "@remix-run/react";
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs, redirect } from "@remix-run/node";
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import { createServerClient } from "@supabase/auth-helpers-remix";
 import { getSupabaseTokensFromSession } from "~/lib/session.server";
 
-// --- Typdefinitionen ---
 type ProfileData = {
   user_id?: string;
   vorname?: string;
   nachname?: string;
-  straße?: string;
+  strasse?: string;
   hausnummer?: string;
-  türnummer?: string;
+  tuernummer?: string;
   stiege?: string;
   postleitzahl?: string;
   ort?: string;
@@ -26,11 +25,11 @@ type ActionResponse = {
   error?: string | null;
 };
 
-// --- Loader ---
-// --- Loader ---
 export async function loader({ request }: LoaderFunctionArgs) {
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
-  if (!refresh_token || !access_token) {
+
+  if (!refresh_token && !access_token) {
+    console.log("[Profil-Loader] Tokens fehlen:", refresh_token, access_token);
     return json({ profile: null, error: null, needsClientAuth: true });
   }
 
@@ -41,46 +40,59 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { request, response }
   );
 
-  await supabase.auth.setSession({ refresh_token, access_token });
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return json({
-      profile: null,
-      error: "Benutzer konnte nicht authentifiziert werden.",
-      needsClientAuth: true
+  try {
+    await supabase.auth.setSession({
+      refresh_token: refresh_token!,
+      access_token: access_token!
     });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log("[Profil-Loader] Supabase-User:", user, userError);
+
+    if (userError || !user) {
+      return json({ profile: null, error: "Benutzer nicht gefunden", needsClientAuth: true });
+    }
+
+    const { data: rows, error: profileError } = await supabase
+      .rpc("get_benutzer_profil", { user_id_param: user.id });
+
+    if (profileError) {
+      console.error("[Profil-Loader] Profil-Fehler:", profileError);
+      return json({ profile: null, error: "Profil konnte nicht geladen werden.", needsClientAuth: false }, { headers: response.headers });
+    }
+
+    const raw = rows?.[0];
+
+    if (!raw) {
+      return json({ profile: null, error: "Kein Profil vorhanden", needsClientAuth: false }, { headers: response.headers });
+    }
+
+    const profile: ProfileData = {
+      user_id: raw.user_id,
+      vorname: raw.vorname,
+      nachname: raw.nachname,
+      strasse: raw["strasse"],
+      hausnummer: raw.hausnummer,
+      tuernummer: raw["tuernummer"],
+      stiege: raw.stiege,
+      postleitzahl: raw.postleitzahl,
+      ort: raw.ort,
+      telefonnummer: raw.telefonnummer,
+      email: user.email,
+    };
+
+    return json({ profile, error: null, needsClientAuth: false }, { headers: response.headers });
+
+  } catch (error) {
+    console.error("[Profil-Loader] Unerwarteter Fehler:", error);
+    return json({ profile: null, error: "Ein unerwarteter Serverfehler ist aufgetreten.", needsClientAuth: true });
   }
-
-  const { data: rows, error: profileError } = await supabase
-    .rpc("get_benutzer_profil", { user_id_param: user.id });
-
-  console.log("[Loader] rows aus get_benutzer_profil:", rows);
-  console.log("[Loader] Fehler:", profileError);
-
-  const profile = rows && rows.length > 0 ? rows[0] : null;
-
-  if (!profile) {
-    return json({
-      profile: null,
-      error: "Kein Benutzerprofil gefunden.",
-      needsClientAuth: false
-    }, { headers: response.headers });
-  }
-
-  return json({
-    profile: { ...profile, email: user.email },
-    error: null,
-    needsClientAuth: false
-  }, { headers: response.headers });
 }
 
-
-// --- Action ---
 export async function action({ request }: ActionFunctionArgs) {
   const { refresh_token, access_token } = await getSupabaseTokensFromSession(request);
-  if (!refresh_token || !access_token) {
-    return json<ActionResponse>({ success: false, error: "Nicht authentifiziert. Bitte einloggen." });
+  if (!refresh_token && !access_token) {
+    return json<ActionResponse>({ success: false, error: "Nicht authentifiziert. Bitte melden Sie sich an." });
   }
 
   const response = new Response();
@@ -89,55 +101,57 @@ export async function action({ request }: ActionFunctionArgs) {
     process.env.SUPABASE_ANON_KEY!,
     { request, response }
   );
-  await supabase.auth.setSession({ refresh_token, access_token });
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    return json<ActionResponse>({ success: false, error: "Benutzer konnte nicht geladen werden." });
-  }
-
-  const formData = await request.formData();
-  const actionType = formData.get("_action");
-
-  if (actionType === "delete") {
-    // Konto löschen
-    await supabase.from("benutzer").delete().eq("user_id", user.id);
-    await supabase.auth.admin.deleteUser(user.id); // Requires service role key if used on server
-    return redirect("/logout");
-  }
-
-  // Profil aktualisieren
-  const newPassword = formData.get("password") as string;
-
-  const profileData: ProfileData = {
-    user_id: user.id,
-    vorname: formData.get("vorname") as string,
-    nachname: formData.get("nachname") as string,
-    straße: formData.get("straße") as string,
-    hausnummer: formData.get("hausnummer") as string,
-    türnummer: formData.get("türnummer") as string,
-    stiege: formData.get("stiege") as string,
-    postleitzahl: formData.get("postleitzahl") as string,
-    ort: formData.get("ort") as string,
-    telefonnummer: formData.get("telefonnummer") as string,
-    email: user.email
-  };
-
-  let passwordChanged = false;
-  if (newPassword && newPassword.length >= 6) {
-    const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
-    if (passwordError) {
-      return json<ActionResponse>({ success: false, error: "Passwort konnte nicht geändert werden." });
+  try {
+    if (refresh_token && access_token) {
+      await supabase.auth.setSession({ refresh_token, access_token });
     }
-    passwordChanged = true;
-  }
 
-  const { error: upsertError } = await supabase.from("benutzer").upsert(profileData);
-  if (upsertError) {
-    return json<ActionResponse>({ success: false, error: "Profil konnte nicht aktualisiert werden." });
-  }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return json<ActionResponse>({ success: false, error: "Benutzer konnte nicht authentifiziert werden." });
+    }
 
-  return json<ActionResponse>({ success: true, passwordChanged, error: null });
+    const formData = await request.formData();
+    const newPassword = formData.get("password") as string;
+
+    const profileData: ProfileData = {
+      user_id: user.id,
+      vorname: formData.get("vorname") as string,
+      nachname: formData.get("nachname") as string,
+      strasse: formData.get("strasse") as string,
+      hausnummer: formData.get("hausnummer") as string,
+      tuernummer: formData.get("tuernummer") as string,
+      stiege: formData.get("stiege") as string,
+      postleitzahl: formData.get("postleitzahl") as string,
+      ort: formData.get("ort") as string,
+      telefonnummer: formData.get("telefonnummer") as string,
+      email: user.email
+    };
+
+    let passwordChanged = false;
+    if (newPassword && newPassword.length >= 6) {
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (passwordError) {
+        return json<ActionResponse>({ success: false, error: "Passwort konnte nicht geändert werden." });
+      }
+      passwordChanged = true;
+    }
+
+    const { error: upsertError } = await supabase
+      .from("benutzer")
+      .upsert(profileData);
+
+    if (upsertError) {
+      return json<ActionResponse>({ success: false, error: "Profil konnte nicht aktualisiert werden." });
+    }
+
+    return json<ActionResponse>({ success: true, passwordChanged, error: null });
+  } catch (error) {
+    return json<ActionResponse>({ success: false, error: "Ein unerwarteter Fehler ist aufgetreten." });
+  }
 }
 
 export default function ProfilPage() {
@@ -152,22 +166,25 @@ export default function ProfilPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    if (profile) {
-      console.log("Setting localProfile:", profile); // ✅ für Debugging
-      setLocalProfile(profile);
-      localStorage.removeItem("user-profile-cache");
-    }
-  
     if (needsClientAuth) {
       const isLoggedIn = localStorage.getItem("sb-is-logged-in") === "true";
       if (!isLoggedIn) {
         navigate("/login");
+        return;
       }
+      const cachedProfile = localStorage.getItem("user-profile-cache");
+      if (cachedProfile) {
+        try {
+          setLocalProfile(JSON.parse(cachedProfile));
+        } catch (e) {
+          console.error("[ProfilPage] Fehler beim Parsen:", e);
+        }
+      }
+    } else if (profile) {
+      setLocalProfile(profile);
     }
-  
     setIsLoading(false);
   }, [profile, needsClientAuth, navigate]);
-  
 
   useEffect(() => {
     if (actionData?.success) {
@@ -201,7 +218,6 @@ export default function ProfilPage() {
     );
   }
 
-  /*Ab hier beginnt die Komponente */
   return (
     <div className="flex justify-center items-start min-h-screen pt-20 px-4 bg-white text-gray-900">
       <div className="w-full max-w-3xl bg-white/70 backdrop-blur-md shadow-xl rounded-xl p-10 space-y-6 border border-gray-200">
@@ -234,8 +250,8 @@ export default function ProfilPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-2 flex flex-col">
-                <label htmlFor="straße" className="text-sm font-medium mb-1">Straße</label>
-                <input id="straße" name="straße" value={localProfile.straße || ""} onChange={handleInputChange}
+                <label htmlFor="strasse" className="text-sm font-medium mb-1">Straße</label>
+                <input id="strasse" name="straße" value={localProfile.strasse || ""} onChange={handleInputChange}
                   className="px-4 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col">
@@ -244,8 +260,8 @@ export default function ProfilPage() {
                   className="px-3 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col">
-                <label htmlFor="türnummer" className="text-sm font-medium mb-1">Tür</label>
-                <input id="türnummer" name="türnummer" value={localProfile.türnummer || ""} onChange={handleInputChange}
+                <label htmlFor="tuernummer" className="text-sm font-medium mb-1">Tür</label>
+                <input id="tuernummer" name="tuernummer" value={localProfile.tuernummer || ""} onChange={handleInputChange}
                   className="px-3 py-2 border border-gray-300 rounded bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col">

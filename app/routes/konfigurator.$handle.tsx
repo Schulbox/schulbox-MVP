@@ -1,6 +1,7 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
+import { useSchulbox } from "~/context/SchulboxContext";
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const handle = params.handle;
@@ -56,13 +57,17 @@ export default function KonfiguratorDetailPage() {
   const product = useLoaderData<typeof loader>();
   const image = product.images.edges[0]?.node;
   const [clicked, setClicked] = useState(false);
-  const [schulbox, setSchulbox] = useState<Record<string, number>>({});
+  const { addToBox } = useSchulbox(); // ✅ nur im Client verwenden
 
   const handleAddToBox = () => {
-    setSchulbox((prev) => ({
-      ...prev,
-      [product.id]: (prev[product.id] || 0) + 1,
-    }));
+    addToBox({
+      id: product.id,
+      title: product.title,
+      quantity: 1,
+      price: parseFloat(product.priceRange.minVariantPrice.amount),
+      image: image?.url || "",
+    });
+
     setClicked(true);
     setTimeout(() => setClicked(false), 300);
   };

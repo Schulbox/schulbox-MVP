@@ -1,10 +1,47 @@
-// app/routes/warenkorb.tsx
 import { useCart } from "~/context/CartContext";
-import { Link } from "@remix-run/react";
+import { useOutletContext } from "@remix-run/react";
+import { useState } from "react";
+import LoginPopup from "~/components/LoginPopup";
+import { createShopifyCheckout } from "~/utils/createShopifyCheckout";
+
+type User = {
+  email?: string;
+  role?: string;
+  vorname?: string;
+  nachname?: string;
+} | null;
+
+type OutletContextType = {
+  user: User | null;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+};
 
 export default function Warenkorb() {
   const { items, totalItems } = useCart();
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const outletContext = useOutletContext<OutletContextType | null>();
+  const [showLogin, setShowLogin] = useState(false);
+
+  const handleCheckout = async () => {
+    if (!outletContext?.isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
+
+    const lineItems = items.map((item) => ({
+      variantId: item.id, // ACHTUNG: `item.id` muss eine Shopify-Variant-ID sein!
+      quantity: item.quantity,
+    }));
+
+    const checkoutUrl = await createShopifyCheckout(lineItems);
+
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
+    } else {
+      alert("Fehler beim Erstellen des Checkouts.");
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -13,12 +50,12 @@ export default function Warenkorb() {
       {items.length === 0 ? (
         <div className="text-center space-y-6">
           <p className="text-gray-500 text-lg">Dein Warenkorb ist leer.</p>
-          <Link
-            to="/webshop"
+          <a
+            href="/webshop"
             className="inline-block bg-[#005eb8] hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition"
           >
             Zurück zum Shop
-          </Link>
+          </a>
         </div>
       ) : (
         <div className="space-y-8">
@@ -61,14 +98,18 @@ export default function Warenkorb() {
               Zwischensumme ({totalItems} Artikel):{" "}
               <span className="text-[#005eb8]">{totalPrice.toFixed(2)} €</span>
             </div>
-            <Link
-              to="/kasse"
+            <button
+              onClick={handleCheckout}
               className="inline-block bg-[#005eb8] hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-bold text-lg transition"
             >
               Zur Kasse
-            </Link>
+            </button>
           </div>
         </div>
+      )}
+
+      {showLogin && (
+        <LoginPopup onClose={() => setShowLogin(false)} />
       )}
     </div>
   );

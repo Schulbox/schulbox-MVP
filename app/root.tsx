@@ -23,6 +23,7 @@ import { triggerCartSync } from "./context/CartContext";
 import Footer from "~/components/footer";
 import tailwindStyles from "~/styles/tailwind.css?url";
 import { SearchProvider } from "~/context/SearchContext";
+import { SchulboxProvider } from "~/context/SchulboxContext";
 
 
 // Typ für den Benutzer
@@ -31,7 +32,15 @@ export type User = {
   role?: string;
   vorname?: string;
   nachname?: string;
+  strasse?: string;
+  hausnummer?: string;
+  tuernummer?: string;
+  stiege?: string;
+  postleitzahl?: string;
+  ort?: string;
+  telefonnummer?: string;
 } | null;
+
 
 type OutletContextType = {
   user: User | null;
@@ -278,7 +287,15 @@ export default function App() {
           role: benutzerProfilRPC[0].role,
           vorname: benutzerProfilRPC[0].vorname,
           nachname: benutzerProfilRPC[0].nachname,
+          strasse: benutzerProfilRPC[0].strasse,
+          hausnummer: benutzerProfilRPC[0].hausnummer,
+          tuernummer: benutzerProfilRPC[0].tuernummer,
+          stiege: benutzerProfilRPC[0].stiege,
+          postleitzahl: benutzerProfilRPC[0].postleitzahl,
+          ort: benutzerProfilRPC[0].ort,
+          telefonnummer: benutzerProfilRPC[0].telefonnummer,
         };
+      
         
         // Cache die Benutzerdaten
         localStorage.setItem('user-profile-cache', JSON.stringify(userData));
@@ -474,11 +491,13 @@ export default function App() {
       </head>
       <body className="bg-gray-50 min-h-screen text-black">
           <CartProvider>
+          <SchulboxProvider>
           <SearchProvider>
             <Header user={user} isLoggedIn={isLoggedIn} isLoading={isLoading} />
             <Outlet context={{ user, isLoggedIn, isLoading, refreshAuth }} />
             <Footer /> {/* ✅ Footer hier einfügen */}
             </SearchProvider>
+            </SchulboxProvider>
           </CartProvider>
         <ScrollRestoration />
         <script
