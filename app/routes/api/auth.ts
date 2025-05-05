@@ -7,3 +7,4 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const redirectUrl = await getAuthUrl(request);
   return redirect(redirectUrl);
 }
+
