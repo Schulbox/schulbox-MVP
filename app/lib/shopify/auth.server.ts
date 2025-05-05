@@ -4,7 +4,7 @@ import { redirect } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { supabase } from "~/lib/supabaseClient";
 import type { Session } from "@shopify/shopify-api";
-import { authenticate as shopifyAuthenticate } from "@shopify/shopify-app-remix/server";
+
 
 
 // Generiert die OAuth-URL für die Shopify-Autorisierung
@@ -91,4 +91,4 @@ export async function getAuthenticatedClient() {
   return client;
 }
 
-export const authenticate = shopifyAuthenticate;
+
