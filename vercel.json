@@ -1,7 +1,8 @@
 {
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
+  "rewrites": [
+    {
+      "source": "/webshop/:slug*",
+      "destination": "/webshop/$slug"
     }
-  }
+  ]
 }

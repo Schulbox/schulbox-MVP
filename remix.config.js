@@ -5,6 +5,7 @@ module.exports = {
   ignoredRouteFiles: ["**/.*"],
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
+  serverBuildTarget: "vercel",
   publicPath: "/build/",
   serverModuleFormat: "esm",
   future: {
