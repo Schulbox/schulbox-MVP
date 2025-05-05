@@ -1,8 +1,9 @@
 {
   "rewrites": [
     {
-      "source": "/webshop/:slug*",
-      "destination": "/webshop/$slug"
+      "source": "/api/:path*",
+      "destination": "/api/handler"
     }
   ]
 }
+
