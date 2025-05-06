@@ -5,7 +5,7 @@ embedded = true
 
 [auth]
 redirect_urls = [
-  "https://schulbox-mvp.vercel.app/api/auth/callback"
+  "https://schulbox-mvp.vercel.app/auth/callback"
 ]
 
 [access_scopes]
