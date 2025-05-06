@@ -44,10 +44,19 @@ export async function action({ request }: ActionFunctionArgs) {
     console.log("✅ Shopify-Kunde erfolgreich angelegt");
 
     if (signUpError || !data.user) {
+      const message = signUpError?.message || "Unbekannter Fehler";
+    
+      if (signUpError?.message?.includes("already registered")) {
+        return json<ActionResponse>({
+          error: "Diese E-Mail ist bereits registriert. Bitte einloggen oder Passwort zurücksetzen.",
+        });
+      }
+    
       return json<ActionResponse>({
-        error: translateError(signUpError?.message || "Unbekannter Fehler"),
+        error: translateError(message),
       });
     }
+    
 
     // ✅ Shopify-Kunde anlegen + Einladung senden
     await createShopifyCustomer({

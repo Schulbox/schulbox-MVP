@@ -1,30 +1,19 @@
-// app/lib/shopify/config.server.ts
 import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
 import { restResources } from "@shopify/shopify-api/rest/admin/2023-10";
-import { shopifyFetch } from "@shopify/shopify-api/adapters/node"; // der Adapter wird _implizit_ registriert
+import nodeAdapter from "@shopify/shopify-api/adapters/node"; // ✅ Das ist korrekt für 11.12.0
 
-const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || "PLACEHOLDER_API_KEY";
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "PLACEHOLDER_API_SECRET";
-const SHOPIFY_SHOP = process.env.SHOPIFY_SHOP || "PLACEHOLDER_SHOP";
+const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY!;
+const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET!;
+const SHOPIFY_SCOPES = process.env.SHOPIFY_SCOPES || "read_products,write_products";
 const HOST = process.env.HOST || "https://schulbox-mvp.vercel.app";
-
-const SCOPES = [
-  "read_products",
-  "write_products",
-  "read_orders",
-  "write_orders",
-  "read_customers",
-  "write_customers",
-];
 
 export const shopify = shopifyApi({
   apiKey: SHOPIFY_API_KEY,
   apiSecretKey: SHOPIFY_API_SECRET,
-  scopes: SCOPES,
-  hostName: HOST.replace(/^https:\/\//, ""),
-  isEmbeddedApp: true,
+  scopes: SHOPIFY_SCOPES.split(","),
+  hostName: new URL(HOST).host,
+  isEmbeddedApp: false,
   apiVersion: LATEST_API_VERSION,
   restResources,
+  adapter: nodeAdapter, // ✅ richtig für v11.12.0
 });
-
-export const shopifyStore = SHOPIFY_SHOP;
